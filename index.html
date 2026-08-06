@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SousSnap - 智能厨房助手</title>
     <style>
-        /* Modern Clean Style Tokens */
         :root {
             --primary: #10b981;
             --primary-dark: #059669;
@@ -30,7 +29,7 @@
         .logo-icon { width: 34px; height: 34px; background: var(--primary); color: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
         .brand-title { font-size: 17px; font-weight: 700; color: var(--text-main); }
 
-        /* UI Cards */
+        /* Cards */
         .card { background: var(--surface); border-radius: 20px; padding: 18px; margin-top: 14px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
         .card-title { font-size: 15px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; justify-content: space-between; }
         
@@ -43,11 +42,16 @@
         .btn-primary { width: 100%; background: var(--primary); color: white; border: none; padding: 13px; border-radius: 14px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
         .btn-secondary { width: 100%; background: var(--primary-light); color: var(--primary-dark); border: 1px solid #a7f3d0; padding: 12px; border-radius: 14px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
 
+        /* Preference Selector Buttons */
+        .chip-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .chip { border: 1px solid #cbd5e1; background: #f8fafc; color: var(--text-sub); padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+        .chip.active { background: var(--primary-light); color: var(--primary-dark); border-color: var(--primary); font-weight: 600; }
+
         /* Upload Zone */
         .upload-zone { border: 2px dashed #cbd5e1; border-radius: 16px; padding: 18px; text-align: center; position: relative; background: #fafafa; margin-top: 10px; }
         .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
 
-        /* Pantry Grid & Badges */
+        /* Pantry Items */
         .pantry-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #f8fafc; border-radius: 12px; margin-top: 8px; font-size: 13px; }
         .pantry-tag { font-size: 10px; padding: 2px 6px; border-radius: 6px; font-weight: 600; }
         .tag-fresh { background: #dcfce7; color: #15803d; }
@@ -101,6 +105,16 @@
                 <button class="btn-primary" style="margin-top: 14px;" onclick="generateRecipe()">
                     📖 获取菜谱
                 </button>
+            </div>
+
+            <!-- Feedback & Refine Section (修改 3: 自然语言调整菜谱) -->
+            <div id="refineSection" class="card hidden">
+                <div class="card-title">💬 调整菜谱与建议</div>
+                <p style="font-size:11px; color:var(--text-sub); margin-top:4px;">对当前菜谱不满意？输入你的微调要求：</p>
+                <div style="display:flex; gap:6px; margin-top:8px;">
+                    <input type="text" id="feedbackInput" placeholder="例如：早餐想换成西餐 / 晚餐换成汤" style="flex:1; padding:8px 12px; border:1px solid #cbd5e1; border-radius:10px; font-size:12px;">
+                    <button onclick="generateRecipeWithFeedback()" style="background:var(--primary); color:white; border:none; padding:0 14px; border-radius:10px; font-size:12px; font-weight:600; white-space:nowrap;">重新生成</button>
+                </div>
             </div>
 
             <!-- Quick Photo Upload -->
@@ -157,14 +171,29 @@
         </section>
 
 
-        <!-- TAB 4: 个人中心 -->
+        <!-- TAB 4: 个人中心 (修改 1: 增加口味与菜系 Button 选择) -->
         <section id="tab-profile" class="hidden">
             <div class="card">
-                <div class="card-title">个人偏好 Profile</div>
-                <div style="font-size:12px; color:var(--text-sub); margin-top:8px; line-height:1.6;">
-                    • 偏好风格：家常快手菜、少油少盐<br>
-                    • 常备调料：葱姜蒜、酱油、鸡蛋、豆腐<br>
-                    • 缓存清理：小票临时照片将于 14 天后自动释放
+                <div class="card-title">口味偏好</div>
+                <p style="font-size:11px; color:var(--text-sub); margin-top:2px;">选择你喜好的口味习惯：</p>
+                <div class="chip-group" id="tasteChips">
+                    <button class="chip" onclick="toggleChip(this, 'taste', '清淡')">🍃 清淡</button>
+                    <button class="chip" onclick="toggleChip(this, 'taste', '香辣')">🌶️ 香辣</button>
+                    <button class="chip" onclick="toggleChip(this, 'taste', '少油低脂')">🥗 少油低脂</button>
+                    <button class="chip" onclick="toggleChip(this, 'taste', '酸甜')">🍋 酸甜</button>
+                    <button class="chip" onclick="toggleChip(this, 'taste', '浓郁重口')">🍲 浓郁重口</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">菜系偏好</div>
+                <p style="font-size:11px; color:var(--text-sub); margin-top:2px;">选择你常吃或喜欢的菜系：</p>
+                <div class="chip-group" id="cuisineChips">
+                    <button class="chip" onclick="toggleChip(this, 'cuisine', '家常菜')">🍳 经典家常菜</button>
+                    <button class="chip" onclick="toggleChip(this, 'cuisine', '川湘菜')">🔥 川湘菜</button>
+                    <button class="chip" onclick="toggleChip(this, 'cuisine', '粤菜江浙菜')">蒸 粤菜/江浙菜</button>
+                    <button class="chip" onclick="toggleChip(this, 'cuisine', '西餐')">🥩 西餐</button>
+                    <button class="chip" onclick="toggleChip(this, 'cuisine', '日韩料理')">🍱 日韩料理</button>
                 </div>
             </div>
 
@@ -208,18 +237,18 @@
 
     <!-- Application Script -->
     <script>
-        let recipeMode = 'day'; // 'day' | 'week'
+        let recipeMode = 'day'; 
         let currentImageBase64 = null;
-        let pantry = []; // [{ name: "土豆", addedDaysAgo: 1, expireDays: 7 }]
-        let favorites = [];
+        let pantry = [];
+        let profile = { taste: [], cuisine: [] };
 
         document.addEventListener('DOMContentLoaded', () => {
             loadPantry();
-            loadFavorites();
+            loadProfile();
             cleanExpiredItems();
         });
 
-        // Tab Navigation Switcher
+        // Tab Switcher
         function switchTab(tabName) {
             ['home', 'pantry', 'cookbook', 'profile'].forEach(t => {
                 document.getElementById(`tab-${t}`).classList.add('hidden');
@@ -238,6 +267,31 @@
             });
         }
 
+        // Profile Button Chip Selector Logic
+        function toggleChip(btn, category, value) {
+            btn.classList.toggle('active');
+            if (btn.classList.contains('active')) {
+                if (!profile[category].includes(value)) profile[category].push(value);
+            } else {
+                profile[category] = profile[category].filter(v => v !== value);
+            }
+            saveProfile();
+        }
+
+        function saveProfile() { localStorage.setItem('soussnap_profile', JSON.stringify(profile)); }
+        function loadProfile() {
+            profile = JSON.parse(localStorage.getItem('soussnap_profile') || '{"taste":[],"cuisine":[]}');
+            // Auto-highlight active buttons based on saved profile
+            document.querySelectorAll('#tasteChips .chip').forEach(btn => {
+                const text = btn.innerText.replace(/^[^\s]+\s/, '');
+                if (profile.taste.includes(text)) btn.classList.add('active');
+            });
+            document.querySelectorAll('#cuisineChips .chip').forEach(btn => {
+                const text = btn.innerText.replace(/^[^\s]+\s/, '');
+                if (profile.cuisine.includes(text)) btn.classList.add('active');
+            });
+        }
+
         function handleImageUpload(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -252,14 +306,14 @@
             reader.readAsDataURL(file);
         }
 
-        // Action 1: Scan photo & add to pantry with timestamp
+        // Scan photo & add to pantry
         async function scanImageToPantry() {
             const apiKey = localStorage.getItem('gemini_api_key');
             if (!apiKey) { toggleConfigModal(); return; }
-            if (!currentImageBase64) { alert('请先拍照或选择照片'); return; }
+            if (!currentImageBase64) { alert('请先拍照或选择图片'); return; }
 
             showLoading(true);
-            const prompt = `分析这张超市小票或购物车照片，提取食材食品名称（如“猪肉”、“胡萝卜”）。格式 strictly 为 JSON: {"items": ["食材1", "食材2"]}`;
+            const prompt = `分析这张照片，提取食材名称。严格输出 JSON: {"items": ["食材1", "食材2"]}`;
 
             try {
                 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
@@ -278,23 +332,40 @@
                 });
                 savePantry();
                 renderPantry();
-                alert(`已将 ${items.length} 种食材放入食材库！`);
-            } catch(e) { alert("识别错误: " + e.message); }
+                alert(`已成功识别并加入 ${items.length} 种食材！`);
+            } catch(e) { alert("识别失败: " + e.message); }
             finally { showLoading(false); }
         }
 
-        // Action 2: Generate Recipe (Day or Week)
-        async function generateRecipe() {
+        // Generate Recipe (修改 2: 容错处理；无照片/空食材库时自动根据偏好推荐)
+        async function generateRecipe(feedbackText = "") {
             const apiKey = localStorage.getItem('gemini_api_key');
             if (!apiKey) { toggleConfigModal(); return; }
 
             showLoading(true);
-            const ingredientList = pantry.map(p => p.name).join('、') || "常用菜肉";
+            
+            // Build Context
+            const ingredientList = pantry.map(p => p.name).join('、');
+            const tastePref = profile.taste.join('、') || "家常口味";
+            const cuisinePref = profile.cuisine.join('、') || "传统家常菜";
             const isWeek = recipeMode === 'week';
 
-            const prompt = `你是一个大厨。现有食材：[${ingredientList}]。请规划${isWeek ? '【本周7天晚餐】' : '【今天三餐（早餐、午餐、晚餐）】'}。
-要求：优先消耗现有食材，并搭配日常常备蔬菜或肉类。
-以 JSON 格式输出：
+            let prompt = `你是一个顶级厨师助手。`;
+            
+            if (ingredientList) {
+                prompt += `用户冰箱现有食材：[${ingredientList}]。请优先消耗这些食材。`;
+            } else {
+                prompt += `用户目前没有上传小票食材库，请基于常见的常备家常食材（如鸡蛋、豆腐、常用蔬菜、鸡肉/猪肉等）为你推荐菜谱。`;
+            }
+
+            prompt += `\n用户口味偏好：[${tastePref}]，菜系偏好：[${cuisinePref}]。`;
+            prompt += `\n请规划 ${isWeek ? '【本周7天晚餐】' : '【今天三餐（早餐、午餐、晚餐）】'}。`;
+
+            if (feedbackText) {
+                prompt += `\n【用户提出的微调与特别要求】：${feedbackText}。请务必根据此要求调整菜谱！`;
+            }
+
+            prompt += `\n严格以 JSON 格式输出：
 {
   "recipes": [
     {
@@ -317,8 +388,16 @@
                 const jsonText = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
                 const result = JSON.parse(jsonText);
                 renderRecipes(result.recipes);
-            } catch(e) { alert("生成失败: " + e.message); }
+                document.getElementById('refineSection').classList.remove('hidden'); // 显示微调输入框
+            } catch(e) { alert("菜谱生成失败: " + e.message); }
             finally { showLoading(false); }
+        }
+
+        // 修改 3: 用户自然语言反馈重新生成
+        function generateRecipeWithFeedback() {
+            const val = document.getElementById('feedbackInput').value.trim();
+            if (!val) return;
+            generateRecipe(val);
         }
 
         function renderRecipes(recipes) {
@@ -342,7 +421,7 @@
                         <div style="font-size:11px; color:var(--text-sub); margin-top:6px;">用料：${r.ingredients.join('、')}</div>
                         
                         <button class="btn-secondary" style="margin-top:10px; padding:6px; font-size:11px;" onclick="toggleDetails(${idx})">
-                            👁️ 查看/折叠菜谱步骤
+                            👁️ 查看/折叠步骤
                         </button>
                         
                         <div id="details-${idx}" class="recipe-details hidden">${r.steps}</div>
@@ -371,7 +450,7 @@
             reader.readAsDataURL(file);
         }
 
-        // Pantry Management & Auto-cleanup (10 Days)
+        // Pantry Functions
         function renderPantry() {
             const list = document.getElementById('pantryList');
             list.innerHTML = '';
@@ -392,7 +471,6 @@
         }
 
         function cleanExpiredItems() {
-            // Auto delete items > 10 days
             pantry = pantry.filter(item => (Date.now() - item.timestamp) < (10 * 24 * 60 * 60 * 1000));
             savePantry();
             renderPantry();
@@ -414,14 +492,14 @@
         function savePantry() { localStorage.setItem('soussnap_pantry', JSON.stringify(pantry)); }
         function loadPantry() { pantry = JSON.parse(localStorage.getItem('soussnap_pantry') || '[]'); renderPantry(); }
 
-        // Shopping List Generator
+        // Shopping List
         async function generateShoppingList() {
             const apiKey = localStorage.getItem('gemini_api_key');
-            if (!apiKey) return;
+            if (!apiKey) { toggleConfigModal(); return; }
             const container = document.getElementById('shoppingListContainer');
-            container.innerHTML = "⏳ 正在生成建议补充清单...";
+            container.innerHTML = "⏳ 正在分析补货清单...";
 
-            const prompt = `结合常见营养搭配，目前缺少的食材。输出 JSON: {"shopping": ["鸡蛋", "青菜"]}`;
+            const prompt = `结合当前偏好和缺少的基础食材，推荐需要买的食材。输出 JSON: {"shopping": ["鸡蛋", "青菜"]}`;
             try {
                 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
                     method: 'POST', headers: {'Content-Type': 'application/json'},
