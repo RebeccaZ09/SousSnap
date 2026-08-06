@@ -3,61 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SousSnap - 智能食材与菜谱助手</title>
+    <title>SousSnap - 智能厨房助手</title>
     <style>
-        /* Base Reset & Design Tokens */
+        /* Modern Clean Style Tokens */
+        :root {
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --primary-light: #ecfdf5;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text-main: #0f172a;
+            --text-sub: #64748b;
+            --border: #f1f5f9;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: #f8fafc; color: #1e293b; padding-bottom: 3rem; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg); color: var(--text-main); padding-bottom: 80px; -webkit-tap-highlight-color: transparent; }
         .container { max-width: 440px; margin: 0 auto; padding: 0 16px; }
-        
+
         /* Header */
         header { position: sticky; top: 0; background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(10px); border-bottom: 1px solid #e2e8f0; z-index: 10; padding: 12px 16px; }
         .header-content { max-width: 440px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
-        .brand { display: flex; align-items: center; gap: 10px; }
-        .logo-icon { width: 36px; height: 36px; background: #16a34a; color: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-        .brand-title { font-size: 17px; font-weight: 700; color: #0f172a; letter-spacing: -0.3px; }
-        .brand-subtitle { font-size: 11px; color: #64748b; }
-        .icon-btn { background: none; border: none; padding: 6px; cursor: pointer; color: #64748b; border-radius: 8px; font-size: 18px; }
+        .brand { display: flex; align-items: center; gap: 8px; }
+        .logo-icon { width: 34px; height: 34px; background: var(--primary); color: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        .brand-title { font-size: 17px; font-weight: 700; color: var(--text-main); }
 
-        /* Card Component */
-        .card { background: white; border-radius: 20px; padding: 18px; margin-top: 14px; border: 1px solid #f1f5f9; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
-        .card-title { font-size: 14px; font-weight: 700; color: #1e293b; display: flex; align-items: center; justify-content: space-between; }
+        /* UI Cards */
+        .card { background: var(--surface); border-radius: 20px; padding: 18px; margin-top: 14px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
+        .card-title { font-size: 15px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; justify-content: space-between; }
         
-        /* Notice Banner */
-        .notice { background: #fffbebf8; border: 1px solid #fef3c7; color: #92400e; padding: 12px; border-radius: 14px; font-size: 12px; margin-top: 14px; display: flex; gap: 8px; }
+        /* Segmented Control Switch (Day / Week) */
+        .segmented-control { display: flex; background: #f1f5f9; padding: 3px; border-radius: 12px; margin-top: 12px; }
+        .segment-btn { flex: 1; border: none; background: none; padding: 8px; font-size: 13px; font-weight: 600; color: var(--text-sub); border-radius: 10px; cursor: pointer; transition: all 0.2s; }
+        .segment-btn.active { background: white; color: var(--primary-dark); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+
+        /* Buttons */
+        .btn-primary { width: 100%; background: var(--primary); color: white; border: none; padding: 13px; border-radius: 14px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .btn-secondary { width: 100%; background: var(--primary-light); color: var(--primary-dark); border: 1px solid #a7f3d0; padding: 12px; border-radius: 14px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
 
         /* Upload Zone */
-        .upload-zone { border: 2px dashed #cbd5e1; border-radius: 16px; padding: 20px 16px; text-align: center; cursor: pointer; position: relative; background: #fafafa; margin-top: 10px; }
-        .upload-zone input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
-        .upload-icon { width: 40px; height: 40px; background: #dcfce7; color: #16a34a; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; font-size: 20px; }
-        .upload-text { font-size: 13px; font-weight: 600; color: #334155; }
-        .upload-subtext { font-size: 11px; color: #94a3b8; margin-top: 2px; }
-        .preview-img { max-height: 180px; border-radius: 12px; margin: 0 auto; display: block; border: 1px solid #e2e8f0; }
+        .upload-zone { border: 2px dashed #cbd5e1; border-radius: 16px; padding: 18px; text-align: center; position: relative; background: #fafafa; margin-top: 10px; }
+        .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
 
-        /* Action Buttons */
-        .btn-group { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
-        .btn-primary { width: 100%; background: #16a34a; color: white; border: none; padding: 13px; border-radius: 14px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
-        .btn-primary:active { background: #15803d; }
-        .btn-secondary { width: 100%; background: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0; padding: 13px; border-radius: 14px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
-        .btn-secondary:active { background: #e2e8f0; }
+        /* Pantry Grid & Badges */
+        .pantry-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #f8fafc; border-radius: 12px; margin-top: 8px; font-size: 13px; }
+        .pantry-tag { font-size: 10px; padding: 2px 6px; border-radius: 6px; font-weight: 600; }
+        .tag-fresh { background: #dcfce7; color: #15803d; }
+        .tag-warn { background: #fef3c7; color: #b45309; }
 
-        /* Badges & Recipe Display */
-        .badge-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-        .badge { background: #f0fdf4; color: #15803d; padding: 5px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1px solid #bbf7d0; }
-        
-        .recipe-card { background: white; border-radius: 16px; padding: 14px; margin-top: 10px; border: 1px solid #f1f5f9; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
-        .recipe-day { font-size: 11px; font-weight: 700; color: #16a34a; background: #f0fdf4; padding: 3px 8px; border-radius: 6px; display: inline-block; }
-        .recipe-name { font-size: 14px; font-weight: 700; color: #0f172a; margin-top: 6px; }
-        .recipe-ingredient { font-size: 11px; color: #64748b; margin-top: 4px; }
-        .recipe-desc { font-size: 12px; color: #475569; margin-top: 6px; background: #f8fafc; padding: 8px 10px; border-radius: 8px; line-height: 1.45; }
+        /* Recipe Cards */
+        .recipe-card { background: white; border-radius: 18px; border: 1px solid var(--border); overflow: hidden; margin-top: 14px; }
+        .recipe-hero { width: 100%; height: 160px; object-fit: cover; background: #e2e8f0; display: block; }
+        .recipe-body { padding: 14px; }
+        .recipe-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .recipe-title { font-size: 16px; font-weight: 700; }
+        .fav-btn { background: none; border: none; font-size: 18px; cursor: pointer; }
+        .recipe-details { font-size: 12px; color: var(--text-sub); margin-top: 10px; line-height: 1.5; background: #f8fafc; padding: 10px; border-radius: 10px; }
 
-        /* Modal */
-        .modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
-        .modal.active { display: flex; }
-        .modal-body { background: white; width: 100%; max-width: 360px; border-radius: 20px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        .modal-input { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 10px; margin-top: 8px; font-size: 13px; }
+        /* Bottom Tab Bar */
+        .tab-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-top: 1px solid #e2e8f0; display: flex; justify-content: space-around; padding: 8px 0; max-width: 440px; margin: 0 auto; z-index: 50; }
+        .tab-item { border: none; background: none; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10px; color: var(--text-sub); cursor: pointer; width: 25%; }
+        .tab-item.active { color: var(--primary); font-weight: 700; }
+        .tab-icon { font-size: 18px; }
 
+        /* Helpers */
         .hidden { display: none !important; }
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 100; }
+        .modal.active { display: flex; }
     </style>
 </head>
 <body>
@@ -67,229 +81,228 @@
         <div class="header-content">
             <div class="brand">
                 <div class="logo-icon">🥗</div>
-                <div>
-                    <div class="brand-title">SousSnap</div>
-                    <div class="brand-subtitle">AI 随身厨房助手</div>
-                </div>
+                <span class="brand-title">SousSnap</span>
             </div>
-            <button class="icon-btn" onclick="toggleModal()">⚙️</button>
+            <button style="background:none; border:none; font-size:18px; cursor:pointer;" onclick="toggleConfigModal()">⚙️</button>
         </div>
     </header>
 
     <main class="container">
-        <!-- API Key Notice -->
-        <div id="keyNotice" class="notice">
-            <span>⚙️</span>
-            <div><b>需要配置 API Key：</b>请点击右上角设置图标，粘贴从 Google AI Studio 获取的免费 Key。</div>
-        </div>
 
-        <!-- Section 1: Quick Action Header -->
-        <div class="card">
-            <div class="card-title">
-                <span>智能菜谱规划</span>
-                <span id="pantryCount" style="font-size: 11px; font-weight: normal; color: #64748b;">已存食材: 0 项</span>
-            </div>
-
-            <div class="btn-group">
-                <!-- Action 1: Get Meal Plan directly without taking photo -->
-                <button class="btn-primary" onclick="generateMealPlanFromPantry()">
-                    <span>📖 获取本周菜谱</span>
+        <!-- TAB 1: 首页 -->
+        <section id="tab-home">
+            <!-- Mode Switcher -->
+            <div class="card">
+                <div class="card-title">规划模式</div>
+                <div class="segmented-control">
+                    <button class="segment-btn active" onclick="setRecipeMode('day')">当天三餐</button>
+                    <button class="segment-btn" onclick="setRecipeMode('week')">本周计划 (7天)</button>
+                </div>
+                <button class="btn-primary" style="margin-top: 14px;" onclick="generateRecipe()">
+                    📖 获取菜谱
                 </button>
             </div>
-        </div>
 
-        <!-- Section 2: Upload Grocery / Receipt -->
-        <div class="card">
-            <div class="card-title">添加新食材</div>
-            <p style="font-size: 12px; color: #64748b; margin-top: 4px;">拍照识别超市小票，或直接拍购物车里的食材</p>
-
-            <div class="upload-zone" id="uploadZone">
-                <input type="file" id="imageInput" accept="image/*" capture="environment" onchange="handleImage(event)">
-                <div id="uploadPlaceholder">
-                    <div class="upload-icon">📷</div>
-                    <div class="upload-text">拍照或选择图片</div>
-                    <div class="upload-subtext">支持超市小票、菜市场小票或购物车照片</div>
+            <!-- Quick Photo Upload -->
+            <div class="card">
+                <div class="card-title">拍照录入食材</div>
+                <p style="font-size:12px; color:var(--text-sub); margin-top:4px;">拍摄小票或购物车照片，提取食材入库</p>
+                
+                <div class="upload-zone">
+                    <input type="file" accept="image/*" capture="environment" onchange="handleImageUpload(event)">
+                    <div id="uploadText">📷 点击拍照或选择文件</div>
+                    <img id="uploadPreview" style="max-height:120px; border-radius:8px; margin-top:6px;" class="hidden">
                 </div>
-                <img id="previewImg" class="preview-img hidden" alt="预览">
+                <button class="btn-secondary" style="margin-top:10px;" onclick="scanImageToPantry()">🔍 识别并合并存入食材库</button>
             </div>
 
-            <button class="btn-secondary" style="margin-top: 12px;" onclick="scanAndSaveIngredients()">
-                <span>🔍 识别并存入食材库</span>
-            </button>
-        </div>
+            <!-- Discover New Dish -->
+            <button class="btn-secondary" style="margin-top:14px;" onclick="generateNewDiscovery()">💡 推荐不常见的家常新菜</button>
 
-        <!-- Loading State -->
-        <div id="loading" class="card hidden" style="text-align: center; padding: 28px;">
-            <div style="font-size: 24px; margin-bottom: 8px;" id="loadingIcon">⏳</div>
-            <div style="font-size: 14px; font-weight: bold;" id="loadingText">SousSnap 正在思考中...</div>
-            <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;" id="loadingSubtext">自动识别并规划丰富营养膳食</div>
-        </div>
-
-        <!-- Section 3: Extracted Ingredients Pantry -->
-        <div id="ingredientsCard" class="card hidden">
-            <div class="card-title">
-                <span>当前的食材库</span>
-                <button onclick="clearPantry()" style="background:none; border:none; color:#ef4444; font-size:11px; cursor:pointer;">清空食材</button>
+            <!-- Loading Spinner -->
+            <div id="loadingState" class="card hidden" style="text-align:center; padding:20px;">
+                ⏳ AI 正在为你计算并匹配食材与菜谱...
             </div>
-            <div id="ingredientsList" class="badge-list"></div>
-        </div>
 
-        <!-- Section 4: Recipe Display -->
-        <div id="recipeSection" class="hidden" style="margin-top: 16px;">
-            <div class="card-title" style="padding-left: 4px; margin-bottom: 6px;">
-                <span>本周晚餐推荐</span>
-                <span id="savedTime" style="font-size: 11px; font-weight: normal; color: #94a3b8;">已生成</span>
+            <!-- Recipes Container -->
+            <div id="recipeResults"></div>
+        </section>
+
+
+        <!-- TAB 2: 食材库 -->
+        <section id="tab-pantry" class="hidden">
+            <div class="card">
+                <div class="card-title">
+                    <span>剩余食材库</span>
+                    <button onclick="clearAllPantry()" style="background:none; border:none; color:var(--danger); font-size:11px; cursor:pointer;">清空</button>
+                </div>
+                <p style="font-size:11px; color:var(--text-sub); margin-top:2px;">超过 10 天未使用的食材将自动清理</p>
+                
+                <div style="display:flex; gap:6px; margin-top:10px;">
+                    <input type="text" id="manualIngredient" placeholder="手动添加食材..." style="flex:1; padding:8px 12px; border:1px solid #cbd5e1; border-radius:10px; font-size:12px;">
+                    <button onclick="addManualIngredient()" style="background:var(--primary); color:white; border:none; padding:0 14px; border-radius:10px; font-size:12px; font-weight:600;">添加</button>
+                </div>
+
+                <div id="pantryList" style="margin-top:10px;"></div>
             </div>
-            <div id="recipeContainer"></div>
-        </div>
+        </section>
+
+
+        <!-- TAB 3: 我的菜谱 / 收藏 & 打卡 -->
+        <section id="tab-cookbook" class="hidden">
+            <div class="card">
+                <div class="card-title">我的心动收藏</div>
+                <div id="favoriteList" style="margin-top:10px;"></div>
+            </div>
+        </section>
+
+
+        <!-- TAB 4: 个人中心 -->
+        <section id="tab-profile" class="hidden">
+            <div class="card">
+                <div class="card-title">个人偏好 Profile</div>
+                <div style="font-size:12px; color:var(--text-sub); margin-top:8px; line-height:1.6;">
+                    • 偏好风格：家常快手菜、少油少盐<br>
+                    • 常备调料：葱姜蒜、酱油、鸡蛋、豆腐<br>
+                    • 缓存清理：小票临时照片将于 14 天后自动释放
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">根据习惯生成买菜清单</div>
+                <button class="btn-primary" style="margin-top:10px;" onclick="generateShoppingList()">🛒 生成补货清单</button>
+                <div id="shoppingListContainer" style="margin-top:10px;"></div>
+            </div>
+        </section>
+
     </main>
 
-    <!-- Modal: Settings -->
+    <!-- Bottom Navigation Bar -->
+    <nav class="tab-bar">
+        <button class="tab-item active" onclick="switchTab('home')">
+            <span class="tab-icon">🏠</span>
+            <span>首页</span>
+        </button>
+        <button class="tab-item" onclick="switchTab('pantry')">
+            <span class="tab-icon">🧺</span>
+            <span>食材库</span>
+        </button>
+        <button class="tab-item" onclick="switchTab('cookbook')">
+            <span class="tab-icon">📖</span>
+            <span>我的菜谱</span>
+        </button>
+        <button class="tab-item" onclick="switchTab('profile')">
+            <span class="tab-icon">👤</span>
+            <span>个人</span>
+        </button>
+    </nav>
+
+    <!-- Config Modal -->
     <div id="configModal" class="modal">
-        <div class="modal-body">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <b style="font-size: 15px;">SousSnap 设置</b>
-                <button class="icon-btn" onclick="toggleModal()">✕</button>
-            </div>
-            <div style="margin-top: 12px;">
-                <label style="font-size: 12px; font-weight: 600;">Google Gemini API Key</label>
-                <input type="password" id="apiKeyInput" class="modal-input" placeholder="AIzaSy...">
-            </div>
-            <button class="btn-primary" style="margin-top: 16px;" onclick="saveApiKey()">保存设置</button>
+        <div style="background:white; width:100%; max-width:320px; border-radius:18px; padding:20px;">
+            <b style="font-size:15px;">设置 API Key</b>
+            <input type="password" id="apiKeyInput" placeholder="Paste Gemini API Key" style="width:100%; padding:10px; margin-top:10px; border:1px solid #cbd5e1; border-radius:10px;">
+            <button class="btn-primary" style="margin-top:12px;" onclick="saveApiKey()">保存设置</button>
         </div>
     </div>
 
-    <!-- Application Script Logic -->
+    <!-- Application Script -->
     <script>
-        let base64Image = null;
-        let pantryIngredients = [];
+        let recipeMode = 'day'; // 'day' | 'week'
+        let currentImageBase64 = null;
+        let pantry = []; // [{ name: "土豆", addedDaysAgo: 1, expireDays: 7 }]
+        let favorites = [];
 
         document.addEventListener('DOMContentLoaded', () => {
-            checkApiKey();
             loadPantry();
-            loadSavedRecipe();
+            loadFavorites();
+            cleanExpiredItems();
         });
 
-        function checkApiKey() {
-            const key = localStorage.getItem('gemini_api_key');
-            if (key) {
-                document.getElementById('keyNotice').classList.add('hidden');
-                document.getElementById('apiKeyInput').value = key;
-            }
+        // Tab Navigation Switcher
+        function switchTab(tabName) {
+            ['home', 'pantry', 'cookbook', 'profile'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+            });
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+
+            document.querySelectorAll('.tab-item').forEach((btn, idx) => {
+                btn.classList.toggle('active', ['home', 'pantry', 'cookbook', 'profile'][idx] === tabName);
+            });
         }
 
-        function toggleModal() {
-            document.getElementById('configModal').classList.toggle('active');
+        function setRecipeMode(mode) {
+            recipeMode = mode;
+            document.querySelectorAll('.segment-btn').forEach((btn, idx) => {
+                btn.classList.toggle('active', (idx === 0 && mode === 'day') || (idx === 1 && mode === 'week'));
+            });
         }
 
-        function saveApiKey() {
-            const key = document.getElementById('apiKeyInput').value.trim();
-            if (key) {
-                localStorage.setItem('gemini_api_key', key);
-                checkApiKey();
-                toggleModal();
-            }
-        }
-
-        function handleImage(e) {
+        function handleImageUpload(e) {
             const file = e.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = function(evt) {
-                base64Image = evt.target.result.split(',')[1];
-                const preview = document.getElementById('previewImg');
-                preview.src = evt.target.result;
-                preview.classList.remove('hidden');
-                document.getElementById('uploadPlaceholder').classList.add('hidden');
+                currentImageBase64 = evt.target.result.split(',')[1];
+                const img = document.getElementById('uploadPreview');
+                img.src = evt.target.result;
+                img.classList.remove('hidden');
+                document.getElementById('uploadText').classList.add('hidden');
             };
             reader.readAsDataURL(file);
         }
 
-        // Action 1: Scan photo (Receipt OR Shopping Cart) and merge into Pantry
-        async function scanAndSaveIngredients() {
+        // Action 1: Scan photo & add to pantry with timestamp
+        async function scanImageToPantry() {
             const apiKey = localStorage.getItem('gemini_api_key');
-            if (!apiKey) { toggleModal(); return; }
-            if (!base64Image) { alert('请先拍照或上传照片！'); return; }
+            if (!apiKey) { toggleConfigModal(); return; }
+            if (!currentImageBase64) { alert('请先拍照或选择照片'); return; }
 
-            showLoading('正在分析照片...', '识别超市小票或购物车中的食材物品');
-
-            const prompt = `你是一个精准的视觉厨师 Agent。请仔细分析这张图片（可能是超市小票，也可能是买菜拍照/购物车实物照片）：
-1. 如果是小票：过滤非食品（如纸巾、塑料袋、价格折扣），提取食物并还原为标准食材名称。
-2. 如果是购物车/实物照片：识别图片中能看到的蔬菜、水果、肉类、海鲜、豆制品等食品名称。
-3. 尽量精准、简短（例如“土豆”、“猪肋排”、“鸡蛋”）。
-
-必须 strictly 以 JSON 格式输出（不要带有 markdown 格式符）：
-{
-  "detected_ingredients": ["食材1", "食材2", "食材3"]
-}`;
+            showLoading(true);
+            const prompt = `分析这张超市小票或购物车照片，提取食材食品名称（如“猪肉”、“胡萝卜”）。格式 strictly 为 JSON: {"items": ["食材1", "食材2"]}`;
 
             try {
                 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [
-                                { text: prompt },
-                                { inline_data: { mime_type: "image/jpeg", data: base64Image } }
-                            ]
-                        }]
-                    })
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: "image/jpeg", data: currentImageBase64 } }] }] })
                 });
-
                 const data = await res.json();
-                if (data.error) throw new Error(data.error.message);
+                const jsonText = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+                const items = JSON.parse(jsonText).items || [];
 
-                const rawText = data.candidates[0].content.parts[0].text;
-                const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-                const result = JSON.parse(cleanJson);
-
-                // Merge with existing pantry without duplicates
-                const newItems = result.detected_ingredients || [];
-                pantryIngredients = Array.from(new Set([...pantryIngredients, ...newItems]));
+                items.forEach(name => {
+                    if (!pantry.some(p => p.name === name)) {
+                        pantry.push({ name, timestamp: Date.now(), expireDays: 7 });
+                    }
+                });
                 savePantry();
                 renderPantry();
-
-                // Clear upload preview
-                base64Image = null;
-                document.getElementById('previewImg').classList.add('hidden');
-                document.getElementById('uploadPlaceholder').classList.remove('hidden');
-                document.getElementById('imageInput').value = '';
-
-                alert(`成功识别并存入 ${newItems.length} 项食材！`);
-            } catch (err) {
-                alert('识别失败: ' + err.message);
-            } finally {
-                hideLoading();
-            }
+                alert(`已将 ${items.length} 种食材放入食材库！`);
+            } catch(e) { alert("识别错误: " + e.message); }
+            finally { showLoading(false); }
         }
 
-        // Action 2: Generate Recipe using Pantry + Common Fresh Grocery
-        async function generateMealPlanFromPantry() {
+        // Action 2: Generate Recipe (Day or Week)
+        async function generateRecipe() {
             const apiKey = localStorage.getItem('gemini_api_key');
-            if (!apiKey) { toggleModal(); return; }
+            if (!apiKey) { toggleConfigModal(); return; }
 
-            showLoading('正在规划本周菜谱...', '结合已有食材与常见肉菜配比');
+            showLoading(true);
+            const ingredientList = pantry.map(p => p.name).join('、') || "常用菜肉";
+            const isWeek = recipeMode === 'week';
 
-            const currentListStr = pantryIngredients.length > 0 ? pantryIngredients.join('、') : "无（由你自由发挥常用菜）";
-
-            const prompt = `你是一个家庭主厨 Agent，负责规划【周一至周日】的晚餐菜谱。
-用户目前的食材库包含：[ ${currentListStr} ]。
-
-规划要求：
-1. 优先消耗用户现有食材库中的菜品。
-2. 非常重要：不必局限于现有食材，可以搭配日常家庭最常见的蔬菜、肉类、蛋类和常见调味品（如葱姜蒜、酱油、豆腐、青菜、鸡胸肉等），以确保菜谱营养均衡、丰富多样。
-3. 请为周一至周日每天推荐一道家常晚餐菜品。
-
-必须 strictly 以 JSON 格式输出（不要带 markdown）：
+            const prompt = `你是一个大厨。现有食材：[${ingredientList}]。请规划${isWeek ? '【本周7天晚餐】' : '【今天三餐（早餐、午餐、晚餐）】'}。
+要求：优先消耗现有食材，并搭配日常常备蔬菜或肉类。
+以 JSON 格式输出：
 {
-  "weekly_plan": [
+  "recipes": [
     {
-      "day": "周一",
+      "time_label": "${isWeek ? '周一' : '早餐'}",
       "dish_name": "菜名",
-      "main_ingredients": ["主料1", "主料2"],
-      "instructions": "简要做法（30字以内）"
+      "ingredients": ["食材1", "食材2"],
+      "steps": "详细烹饪步骤...",
+      "image_keyword": "英文美食搜索词"
     }
   ]
 }`;
@@ -298,114 +311,140 @@
                 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }]
-                    })
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                 });
-
                 const data = await res.json();
-                if (data.error) throw new Error(data.error.message);
-
-                const rawText = data.candidates[0].content.parts[0].text;
-                const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-                const result = JSON.parse(cleanJson);
-
-                renderRecipe(result);
-                localStorage.setItem('soussnap_recipe_data', JSON.stringify({
-                    timestamp: new Date().toLocaleDateString('zh-CN'),
-                    data: result
-                }));
-            } catch (err) {
-                alert('生成菜谱失败: ' + err.message);
-            } finally {
-                hideLoading();
-            }
+                const jsonText = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+                const result = JSON.parse(jsonText);
+                renderRecipes(result.recipes);
+            } catch(e) { alert("生成失败: " + e.message); }
+            finally { showLoading(false); }
         }
 
+        function renderRecipes(recipes) {
+            const container = document.getElementById('recipeResults');
+            container.innerHTML = '';
+
+            recipes.forEach((r, idx) => {
+                const fallbackImg = `https://source.unsplash.com/400x220/?food,${encodeURIComponent(r.image_keyword || 'dish')}`;
+                const card = document.createElement('div');
+                card.className = 'recipe-card';
+                card.innerHTML = `
+                    <img id="img-${idx}" src="${fallbackImg}" class="recipe-hero" onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400'">
+                    <div class="recipe-body">
+                        <div class="recipe-header">
+                            <div>
+                                <span class="pantry-tag tag-fresh">${r.time_label}</span>
+                                <div class="recipe-title" style="margin-top:4px;">${r.dish_name}</div>
+                            </div>
+                            <button class="fav-btn" onclick="toggleFav('${r.dish_name}')">❤️</button>
+                        </div>
+                        <div style="font-size:11px; color:var(--text-sub); margin-top:6px;">用料：${r.ingredients.join('、')}</div>
+                        
+                        <button class="btn-secondary" style="margin-top:10px; padding:6px; font-size:11px;" onclick="toggleDetails(${idx})">
+                            👁️ 查看/折叠菜谱步骤
+                        </button>
+                        
+                        <div id="details-${idx}" class="recipe-details hidden">${r.steps}</div>
+                        
+                        <label class="btn-secondary" style="margin-top:8px; padding:6px; font-size:11px; text-align:center; cursor:pointer;">
+                            📸 上传成品照片打卡
+                            <input type="file" accept="image/*" class="hidden" onchange="uploadCookPhoto(event, 'img-${idx}')">
+                        </label>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function toggleDetails(idx) {
+            document.getElementById(`details-${idx}`).classList.toggle('hidden');
+        }
+
+        function uploadCookPhoto(e, imgId) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                document.getElementById(imgId).src = evt.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Pantry Management & Auto-cleanup (10 Days)
         function renderPantry() {
-            const listEl = document.getElementById('ingredientsList');
-            const countEl = document.getElementById('pantryCount');
-            const cardEl = document.getElementById('ingredientsCard');
-
-            listEl.innerHTML = '';
-            countEl.textContent = `已存食材: ${pantryIngredients.length} 项`;
-
-            if (pantryIngredients.length > 0) {
-                cardEl.classList.remove('hidden');
-                pantryIngredients.forEach((item, index) => {
-                    const badge = document.createElement('span');
-                    badge.className = 'badge';
-                    badge.innerHTML = `${item} <span style="opacity:0.5; margin-left:4px; cursor:pointer;" onclick="removePantryItem(${index})">✕</span>`;
-                    listEl.appendChild(badge);
-                });
-            } else {
-                cardEl.classList.add('hidden');
-            }
+            const list = document.getElementById('pantryList');
+            list.innerHTML = '';
+            pantry.forEach((item, idx) => {
+                const daysOld = Math.floor((Date.now() - item.timestamp) / (1000 * 60 * 60 * 24));
+                const isWarn = daysOld >= 5;
+                const div = document.createElement('div');
+                div.className = 'pantry-item';
+                div.innerHTML = `
+                    <span><b>${item.name}</b></span>
+                    <div>
+                        <span class="pantry-tag ${isWarn ? 'tag-warn' : 'tag-fresh'}">${isWarn ? '⚠️ 尽快食用' : '新鲜'} (${daysOld}天)</span>
+                        <button onclick="removePantry(${idx})" style="background:none; border:none; margin-left:8px; cursor:pointer; color:var(--text-sub);">✕</button>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
         }
 
-        function removePantryItem(index) {
-            pantryIngredients.splice(index, 1);
+        function cleanExpiredItems() {
+            // Auto delete items > 10 days
+            pantry = pantry.filter(item => (Date.now() - item.timestamp) < (10 * 24 * 60 * 60 * 1000));
             savePantry();
             renderPantry();
         }
 
-        function clearPantry() {
-            if (confirm('确定要清空当前的食材库吗？')) {
-                pantryIngredients = [];
+        function addManualIngredient() {
+            const input = document.getElementById('manualIngredient');
+            const val = input.value.trim();
+            if (val) {
+                pantry.push({ name: val, timestamp: Date.now(), expireDays: 7 });
                 savePantry();
                 renderPantry();
+                input.value = '';
             }
         }
 
-        function savePantry() {
-            localStorage.setItem('soussnap_pantry', JSON.stringify(pantryIngredients));
+        function removePantry(idx) { pantry.splice(idx, 1); savePantry(); renderPantry(); }
+        function clearAllPantry() { if (confirm('确定清空食材库？')) { pantry = []; savePantry(); renderPantry(); } }
+        function savePantry() { localStorage.setItem('soussnap_pantry', JSON.stringify(pantry)); }
+        function loadPantry() { pantry = JSON.parse(localStorage.getItem('soussnap_pantry') || '[]'); renderPantry(); }
+
+        // Shopping List Generator
+        async function generateShoppingList() {
+            const apiKey = localStorage.getItem('gemini_api_key');
+            if (!apiKey) return;
+            const container = document.getElementById('shoppingListContainer');
+            container.innerHTML = "⏳ 正在生成建议补充清单...";
+
+            const prompt = `结合常见营养搭配，目前缺少的食材。输出 JSON: {"shopping": ["鸡蛋", "青菜"]}`;
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                const data = await res.json();
+                const jsonText = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+                const list = JSON.parse(jsonText).shopping || [];
+                
+                container.innerHTML = '';
+                list.forEach(item => {
+                    container.innerHTML += `<div style="font-size:12px; margin-top:6px;"><input type="checkbox"> ${item}</div>`;
+                });
+            } catch(e) { container.innerHTML = "生成失败"; }
         }
 
-        function loadPantry() {
-            const saved = localStorage.getItem('soussnap_pantry');
-            if (saved) {
-                try { pantryIngredients = JSON.parse(saved); renderPantry(); } catch(e){}
-            }
+        // Config Modal
+        function toggleConfigModal() { document.getElementById('configModal').classList.toggle('active'); }
+        function saveApiKey() {
+            const key = document.getElementById('apiKeyInput').value.trim();
+            if(key) { localStorage.setItem('gemini_api_key', key); toggleConfigModal(); }
         }
-
-        function renderRecipe(result) {
-            const container = document.getElementById('recipeContainer');
-            container.innerHTML = '';
-            result.weekly_plan.forEach(plan => {
-                const card = document.createElement('div');
-                card.className = 'recipe-card';
-                card.innerHTML = `
-                    <span class="recipe-day">${plan.day}</span>
-                    <div class="recipe-name">${plan.dish_name}</div>
-                    <div class="recipe-ingredient">食材：${plan.main_ingredients.join('、')}</div>
-                    <div class="recipe-desc">${plan.instructions}</div>
-                `;
-                container.appendChild(card);
-            });
-            document.getElementById('savedTime').textContent = '上次生成时间: ' + new Date().toLocaleDateString('zh-CN');
-            document.getElementById('recipeSection').classList.remove('hidden');
-        }
-
-        function loadSavedRecipe() {
-            const saved = localStorage.getItem('soussnap_recipe_data');
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
-                    renderRecipe(parsed.data);
-                    document.getElementById('savedTime').textContent = '上次生成: ' + parsed.timestamp;
-                } catch(e){}
-            }
-        }
-
-        function showLoading(title, subtext) {
-            document.getElementById('loadingText').textContent = title;
-            document.getElementById('loadingSubtext').textContent = subtext;
-            document.getElementById('loading').classList.remove('hidden');
-        }
-
-        function hideLoading() {
-            document.getElementById('loading').classList.add('hidden');
-        }
+        function showLoading(show) { document.getElementById('loadingState').classList.toggle('hidden', !show); }
     </script>
 </body>
 </html>
