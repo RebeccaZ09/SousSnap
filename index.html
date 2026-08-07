@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SousSnap - 智能厨房助手</title>
+    <!-- 拆分后的 CSS 样式文件 -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/board.css">
+</head>
+<body>
+
+<div class="app-container">
+    <!-- 全局加载状态遮罩 -->
+    <div id="loadingState" class="loading-overlay hidden">
+        <div class="spinner"></div>
+        <div id="loadingText">SousSnap AI 思考中...</div>
+    </div>
+
+    <!-- App 顶部 Header -->
+    <header class="app-header">
+        <div class="app-title">
+            <span>🍳</span> SousSnap
+        </div>
+        <button class="icon-btn" id="btnOpenSettings" title="吃货设定">⚙️</button>
+    </header>
+
+    <!-- 主内容区域 -->
+    <main class="content">
+        <!-- TAB 1: 本周三餐规划 (7天看板 View) -->
+        <section id="tab-planner" class="tab-content">
+            <div class="section-header">
+                <h2>📅 本周三餐规划</h2>
+                <button class="btn-primary-sm" id="btnGenerateWeekly">✨ 生成本周三餐</button>
+            </div>
+            
+            <!-- 7天看板容器 (Trello Card Style) -->
+            <div class="board-container" id="weeklyBoard">
+                <!-- 动态由 JS (weeklyBoard.js) 渲染 7 天的 Column -->
+            </div>
+        </section>
+
+        <!-- TAB 2: 食材库 / 拍照识别 -->
+        <section id="tab-pantry" class="tab-content hidden">
+            <div class="card">
+                <div class="card-title">📷 拍照/小票存入食材库</div>
+                <label class="upload-box" for="imageFileInput">
+                    <div id="uploadText">
+                        <div style="font-size: 28px; margin-bottom: 4px;">📷</div>
+                        <div style="font-size: 13px; color: var(--text-sub);">点击拍照或上传小票/食材图片</div>
+                    </div>
+                    <img id="uploadPreview" class="preview-img hidden" alt="预览">
+                    <input type="file" id="imageFileInput" accept="image/*" class="hidden">
+                </label>
+                <button class="btn-primary" style="margin-top: 12px;" id="btnScanImage">🔍 识别并存入食材库</button>
+            </div>
+
+            <div class="card">
+                <div class="card-title">
+                    <span>🧊 我的食材库</span>
+                    <button class="btn-secondary-sm" id="btnClearPantry">清空</button>
+                </div>
+                <div class="inline-input-group">
+                    <input type="text" id="manualIngredientInput" class="input-field" placeholder="手动添加食材...">
+                    <button class="btn-primary-sm" id="btnAddIngredient">添加</button>
+                </div>
+                <div id="pantryList" class="pantry-list"></div>
+            </div>
+        </section>
+
+        <!-- TAB 3: 必吃金榜 (原收藏/清单) -->
+        <section id="tab-favorites" class="tab-content hidden">
+            <div class="card">
+                <div class="card-title">❤️ 必吃金榜</div>
+                <div id="favoriteList"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">🛒 智能补货清单推荐</div>
+                <button class="btn-secondary" id="btnGenerateShopping">生成周度补货清单</button>
+                <div id="shoppingListContainer" style="margin-top: 10px;"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 底部 Tab 导航栏 -->
+    <nav class="tab-bar">
+        <button class="tab-item active" data-tab="planner">
+            <span class="tab-icon">📅</span>
+            <span>三餐规划</span>
+        </button>
+        <button class="tab-item" data-tab="pantry">
+            <span class="tab-icon">🧊</span>
+            <span>食材库</span>
+        </button>
+        <button class="tab-item" data-tab="favorites">
+            <span class="tab-icon">🏆</span>
+            <span>必吃金榜</span>
+        </button>
+    </nav>
+</div>
+
+<!-- 侧滑/底部菜谱详情抽屉 (Recipe Drawer) -->
+<div id="recipeDrawer" class="drawer">
+    <div class="drawer-overlay" id="drawerOverlay"></div>
+    <div class="drawer-content">
+        <button class="drawer-close" id="btnCloseDrawer">✕</button>
+        <div class="drawer-hero-container">
+            <img id="drawerImage" class="drawer-hero-img" src="" alt="菜品图片">
+        </div>
+        <div class="drawer-body">
+            <div class="drawer-header">
+                <div>
+                    <span id="drawerMealTag" class="badge">早餐</span>
+                    <h2 id="drawerTitle" class="drawer-title">菜名加载中...</h2>
+                </div>
+                <button id="drawerFavBtn" class="fav-btn">🤍</button>
+            </div>
+            
+            <div class="section-subtitle">🛒 食材用量</div>
+            <div id="drawerIngredients" class="ingredient-tags"></div>
+
+            <div class="section-subtitle" style="margin-top: 16px;">🍳 烹饪步骤</div>
+            <div id="drawerSteps" class="recipe-steps"></div>
+
+            <!-- 第7项需求：降级后的“大厨私教”微调模块 -->
+            <div class="ai-tutor-box">
+                <div class="ai-tutor-title">🧑‍🍳 大厨私教</div>
+                <div class="ai-tutor-desc">微调小助手：“这道菜想换个做法” / “换个不辣的”…</div>
+                <div class="inline-input-group" style="margin-top: 8px;">
+                    <input type="text" id="aiTutorInput" class="input-field" placeholder="输入你的微调想法...">
+                    <button class="btn-primary-sm" id="btnApplyAiTutor">重构</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 吃货设定 (Preferences) Modal -->
+<div id="settingsModal" class="modal">
+    <div class="modal-body modal-lg">
+        <div class="modal-header">
+            <h3>⚙️ 吃货设定</h3>
+            <button class="modal-close" id="btnCloseSettings">✕</button>
+        </div>
+        
+        <div class="modal-content">
+            <!-- API Key 设置 -->
+            <div class="setting-group">
+                <label class="setting-label">Gemini API Key</label>
+                <input type="password" id="apiKeyInput" class="input-field" placeholder="AIzaSy... 或 AQ...">
+            </div>
+
+            <!-- Google Image Search API (Option A 配图) -->
+            <div class="setting-group">
+                <label class="setting-label">Google Image Search API Key (可选)</label>
+                <input type="password" id="googleApiKeyInput" class="input-field" placeholder="Google API Key">
+                <input type="text" id="googleCxInput" class="input-field" style="margin-top:6px;" placeholder="Custom Search Engine ID (CX)">
+            </div>
+
+            <!-- 忌口/通用偏好 -->
+            <div class="setting-group">
+                <label class="setting-label">忌口或过敏原</label>
+                <input type="text" id="dietaryRestrictionsInput" class="input-field" placeholder="例如：花生、海鲜、忌香菜">
+            </div>
+
+            <hr class="divider">
+            <div class="setting-title">🍽️ 三餐默认规则设定</div>
+
+            <!-- 早餐配置 -->
+            <div class="meal-setting-card">
+                <div class="meal-setting-header">🍳 早餐偏好</div>
+                <div class="setting-row">
+                    <span>菜系风格：</span>
+                    <select id="bfCuisine" class="select-field">
+                        <option value="西式快手" selected>西式快手</option>
+                        <option value="中式家常">中式家常</option>
+                        <option value="日韩料理">日韩料理</option>
+                        <option value="任意">任意</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <span>生成菜品数：</span>
+                    <select id="bfCount" class="select-field">
+                        <option value="1" selected>1 道菜</option>
+                        <option value="2">2 道菜</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 午餐配置 -->
+            <div class="meal-setting-card">
+                <div class="meal-setting-header">🍱 午餐偏好</div>
+                <div class="setting-row">
+                    <span>菜系风格：</span>
+                    <select id="lunchCuisine" class="select-field">
+                        <option value="中式家常" selected>中式家常</option>
+                        <option value="西式轻食">西式轻食</option>
+                        <option value="日韩料理">日韩料理</option>
+                        <option value="川湘麻辣">川湘麻辣</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <span>生成菜品数：</span>
+                    <select id="lunchCount" class="select-field">
+                        <option value="1">1 道菜</option>
+                        <option value="2" selected>2 道菜</option>
+                        <option value="3">3 道菜</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 晚餐配置 -->
+            <div class="meal-setting-card">
+                <div class="meal-setting-header">🍲 晚餐偏好</div>
+                <div class="setting-row">
+                    <span>菜系风格：</span>
+                    <select id="dinnerCuisine" class="select-field">
+                        <option value="中式家常" selected>中式家常</option>
+                        <option value="粤式清淡">粤式清淡</option>
+                        <option value="快手热炒">快手热炒</option>
+                        <option value="丰盛炖煮">丰盛炖煮</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <span>生成菜品数：</span>
+                    <select id="dinnerCount" class="select-field">
+                        <option value="1">1 道菜</option>
+                        <option value="2" selected>2 道菜</option>
+                        <option value="3">3 道菜</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-primary" id="btnSaveSettings">保存吃货设定</button>
+        </div>
+    </div>
+</div>
+
+<!-- 拆分后的 JS 模块入口 (ES Modules) -->
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
