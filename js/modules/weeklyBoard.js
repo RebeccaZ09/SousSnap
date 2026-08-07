@@ -1,8 +1,9 @@
 // js/modules/weeklyBoard.js
-import { generateWeeklyPlanner } from '../api/gemini.js';
+import { generateWeeklyPlanner, generateDailyPlanner } from '../api/gemini.js';
 import { fetchDishImage } from '../api/imageSearch.js';
 import { getPantryList } from './pantry.js';
 import { openRecipeDrawer } from './recipeDrawer.js';
+import { isFavorite, toggleFavorite } from './favorites.js';
 
 let currentWeeklyPlan = JSON.parse(localStorage.getItem('soussnap_current_plan') || 'null');
 
@@ -14,34 +15,35 @@ export function initWeeklyBoardModule() {
 }
 
 function setupBoardControls() {
-    const generateBtn = document.getElementById('btnGenerateWeekly');
-    if (generateBtn) {
-        generateBtn.addEventListener('click', handleGeneratePlan);
+    const btnWeekly = document.getElementById('btnGenerateWeekly');
+    const btnDaily = document.getElementById('btnGenerateDaily');
+
+    if (btnWeekly) {
+        btnWeekly.addEventListener('click', () => handleGenerate('weekly'));
+    }
+    if (btnDaily) {
+        btnDaily.addEventListener('click', () => handleGenerate('daily'));
     }
 }
 
-async function handleGeneratePlan() {
-    const btn = document.getElementById('btnGenerateWeekly');
+async function handleGenerate(mode = 'weekly') {
     const loadingState = document.getElementById('loadingState');
-    
-    if (btn) btn.disabled = true;
     if (loadingState) loadingState.classList.remove('hidden');
 
     try {
         const pantry = getPantryList();
-        const planData = await generateWeeklyPlanner(pantry);
+        const planData = mode === 'daily' 
+            ? await generateDailyPlanner(pantry) 
+            : await generateWeeklyPlanner(pantry);
 
         if (planData && planData.weeklyPlan) {
             currentWeeklyPlan = planData.weeklyPlan;
             localStorage.setItem('soussnap_current_plan', JSON.stringify(currentWeeklyPlan));
             await renderWeeklyBoard(currentWeeklyPlan);
-        } else {
-            throw new Error('未接收到格式正确的周计划数据');
         }
     } catch (err) {
         alert(`生成菜单失败: ${err.message}`);
     } finally {
-        if (btn) btn.disabled = false;
         if (loadingState) loadingState.classList.add('hidden');
     }
 }
@@ -72,14 +74,32 @@ export async function renderWeeklyBoard(planArray) {
             for (const dish of dishes) {
                 const dishCard = document.createElement('div');
                 dishCard.className = 'dish-card-mini';
-                dishCard.onclick = () => openRecipeDrawer(dish);
 
                 const imageUrl = await fetchDishImage(dish.image_search_kw, dish.dish_name);
+                const hasFav = isFavorite(dish.dish_name);
 
                 dishCard.innerHTML = `
-                    <img src="${imageUrl}" class="dish-thumb-mini" alt="${dish.dish_name}" loading="lazy" />
+                    <div class="image-wrapper" style="position: relative;">
+                        <img src="${imageUrl}" class="dish-thumb-mini" alt="${dish.dish_name}" loading="lazy" />
+                        <button class="fav-heart-btn ${hasFav ? 'active' : ''}" style="position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.5); border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; color: white; font-size: 14px; display: flex; align-items: center; justify-content: center;">
+                            ${hasFav ? '❤️' : '🤍'}
+                        </button>
+                    </div>
                     <div class="dish-title-mini">${dish.dish_name}</div>
                 `;
+
+                // 点击爱心切换金榜状态（阻止冒泡以免触发打开菜谱）
+                const heartBtn = dishCard.querySelector('.fav-heart-btn');
+                heartBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const isNowFav = toggleFavorite(dish);
+                    heartBtn.innerHTML = isNowFav ? '❤️' : '🤍';
+                    heartBtn.classList.toggle('active', isNowFav);
+                });
+
+                // 点击卡片其它区域打开详情
+                dishCard.addEventListener('click', () => openRecipeDrawer(dish));
+
                 block.appendChild(dishCard);
             }
             col.appendChild(block);
