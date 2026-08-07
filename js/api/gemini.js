@@ -17,6 +17,28 @@ export async function generateWeeklyPlanner(pantryList = []) {
     return fetchPlanFromGemini(pantryList, 'weekly');
 }
 
+// js/api/gemini.js
+export async function scanImageForIngredients(base64Image, apiKey) {
+    if (!apiKey) throw new Error('API Key is required');
+    
+    // 构造 Gemini Vision API 请求结构...
+    const response = await fetchGeminiVisionApi(base64Image, apiKey);
+    return response.ingredients || [];
+}
+
+export async function refineSingleDish(dishName, modificationInstruction, apiKey) {
+    if (!apiKey) throw new Error('API Key is required');
+
+    // 假设调用 Gemini 生成菜谱重构 JSON
+    const result = await fetchGeminiApi(...); 
+    
+    return {
+        dish_name: result.dish_name || dishName,
+        ingredients: result.ingredients || [],
+        steps: result.steps || []
+    };
+}
+
 async function fetchPlanFromGemini(pantryList, mode = 'weekly') {
     const config = getAppConfig();
     if (!config.geminiApiKey) {
