@@ -338,74 +338,77 @@
         }
 
         // Generate Recipe (修改 2: 容错处理；无照片/空食材库时自动根据偏好推荐)
-        async function generateRecipe(feedbackText = "") {
-            const apiKey = localStorage.getItem('gemini_api_key');
-            if (!apiKey) { toggleConfigModal(); return; }
+       async function generateRecipe(feedbackText = "") {
+        const apiKey = localStorage.getItem('gemini_api_key');
+        if (!apiKey) { toggleConfigModal(); return; }
+    
+        showLoading(true);
         
-            showLoading(true);
-            
-            // 构建上下文与 Prompt
-            const ingredientList = pantry.map(p => p.name).join('、');
-            const tastePref = profile.taste.join('、') || "家常口味";
-            const cuisinePref = profile.cuisine.join('、') || "传统家常菜";
-            const isWeek = recipeMode === 'week';
-        
-            let prompt = `你是一个顶级厨师助手。`;
-            if (ingredientList) {
-                prompt += `用户冰箱现有食材：[${ingredientList}]。请优先消耗这些食材。`;
-            } else {
-                prompt += `用户目前没有上传小票食材库，请基于常见的常备家常食材（如鸡蛋、豆腐、常用蔬菜、鸡肉/猪肉等）为你推荐菜谱。`;
-            }
-            prompt += `\n用户口味偏好：[${tastePref}]，菜系偏好：[${cuisinePref}]。`;
-            prompt += `\n请规划 ${isWeek ? '【本周7天晚餐】' : '【今天三餐（早餐、午层、晚餐）】'}。`;
-        
-            if (feedbackText) {
-                prompt += `\n【用户提出的微调与特别要求】：${feedbackText}。请务必根据此要求调整菜谱！`;
-            }
-        
-            prompt += `\n严格以 JSON 格式输出：
-            {
-              "recipes": [
-                {
-                  "time_label": "${isWeek ? '周一' : '早餐'}",
-                  "dish_name": "菜名",
-                  "ingredients": ["食材1", "食材2"],
-                  "steps": "详细烹饪步骤...",
-                  "image_keyword": "英文美食搜索词"
-                }
-              ]
-            }`;
-
-            try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                });
-                
-                const data = await res.json();
-        
-                // 1. 检查 API 是否返回了 Error 对象
-                if (data.error) {
-                    throw new Error(`API 报错 [${data.error.code}]: ${data.error.message}`);
-                }
-        
-                // 2. 检查 candidates 是否存在
-                if (!data.candidates || data.candidates.length === 0) {
-                    throw new Error("未能生成菜谱，请检查输入的 Key 是否有效或稍后重试。");
-                }
-        
-                const jsonText = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
-                const result = JSON.parse(jsonText);
-                renderRecipes(result.recipes);
-                document.getElementById('refineSection').classList.remove('hidden');
-            } catch(e) { 
-                console.error("Gemini API Error:", e);
-                alert("菜谱生成失败：\n" + e.message); 
-            } finally { 
-                showLoading(false); 
-            }
+        const ingredientList = pantry.map(p => p.name).join('、');
+        const tastePref = profile.taste.join('、') || "家常口味";
+        const cuisinePref = profile.cuisine.join('、') || "传统家常菜";
+        const isWeek = recipeMode === 'week';
+    
+        let prompt = `你是一个顶级厨师助手。`;
+        if (ingredientList) {
+            prompt += `用户冰箱现有食材：[${ingredientList}]。请优先消耗这些食材。`;
+        } else {
+            prompt += `用户目前没有上传小票食材库，请基于常见的常备家常食材（如鸡蛋、豆腐、常用蔬菜、鸡肉/猪肉等）为你推荐菜谱。`;
         }
+        prompt += `\n用户口味偏好：[${tastePref}]，菜系偏好：[${cuisinePref}]。`;
+        prompt += `\n请规划 ${isWeek ? '【本周7天晚餐】' : '【今天三餐（早餐、午餐、晚餐）】'}。`;
+    
+        if (feedbackText) {
+            prompt += `\n【用户提出的微调与特别要求】：${feedbackText}。请务必根据此要求调整菜谱！`;
+        }
+    
+        prompt += `\n严格以 JSON 格式输出：
+        {
+          "recipes": [
+            {
+              "time_label": "${isWeek ? '周一' : '早餐'}",
+              "dish_name": "菜名",
+              "ingredients": ["食材1", "食材2"],
+              "steps": "详细烹饪步骤...",
+              "image_keyword": "英文美食搜索词"
+            }
+          ]
+        }`;
+    
+        try {
+            // Send key via header x-goog-api-key AND URL to satisfy AQ key auth routing
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
+    
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'x-goog-api-key': apiKey 
+                },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
+            
+            const data = await res.json();
+    
+            if (data.error) {
+                throw new Error(`[API Error ${data.error.code}]: ${data.error.message}`);
+            }
+    
+            if (!data.candidates || !data.candidates[0]?.content?.parts[0]?.text) {
+                throw new Error("模型未返回有效结果。");
+            }
+    
+            const jsonText = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+            const result = JSON.parse(jsonText);
+            renderRecipes(result.recipes);
+            document.getElementById('refineSection').classList.remove('hidden');
+        } catch(e) { 
+            console.error("Gemini API Error:", e);
+            alert("菜谱生成失败：\n" + e.message); 
+        } finally { 
+            showLoading(false); 
+        }
+    }
 
         // 修改 3: 用户自然语言反馈重新生成
         function generateRecipeWithFeedback() {
