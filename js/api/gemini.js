@@ -133,6 +133,3 @@ JSON 格式规范：
 
     return cleanAndParseJSON(candidateText);
 }
-
-// 保持原有的微调与图片识别功能
-export async function refineSingleDish(dish, feedback) { /* 原代码保持不变 */ }
