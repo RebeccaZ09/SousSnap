@@ -1,16 +1,35 @@
-# .github/workflows/test.yml
 name: Run Unit Tests
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ main, master, RebeccaZ09-v1 ]
+  pull_request:
+    branches: [ main, master, RebeccaZ09-v1 ]
+
+# Granted write permissions for PR comments & summary rendering
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
   test:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
-      - run: npm test
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npx vitest run --coverage
+
+      - name: Report Test Coverage on GitHub Web
+        uses: davelosert/vitest-coverage-report-action@v2
+        if: always()
