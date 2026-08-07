@@ -5,15 +5,17 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { initPantryModule, getPantryList } from '../../js/modules/pantry.js';
 import * as geminiApi from '../../js/api/gemini.js';
 
-// Mock gemini API 模块中的 scanImageForIngredients 函数
 vi.mock('../../js/api/gemini.js', () => ({
     scanImageForIngredients: vi.fn()
 }));
 
 describe('Pantry Module Unit Tests (食材库模块)', () => {
     beforeEach(() => {
-        // 清理 localStorage 与 DOM
+        // 1. 清空内存数组与 localStorage
+        const list = getPantryList();
+        list.length = 0; 
         localStorage.clear();
+
         document.body.innerHTML = `
             <div id="pantry-tags-container"></div>
             <input id="new-ingredient-input" type="text" />
@@ -22,7 +24,6 @@ describe('Pantry Module Unit Tests (食材库模块)', () => {
             <input type="file" id="receipt-file-input" />
         `;
         
-        // 屏蔽 alert 系统弹窗
         vi.spyOn(window, 'alert').mockImplementation(() => {});
         vi.clearAllMocks();
     });
@@ -67,8 +68,8 @@ describe('Pantry Module Unit Tests (食材库模块)', () => {
         input.value = '黄瓜';
         addBtn.click();
 
-        // 模拟点击移除按钮
-        const removeBtn = document.querySelector('.remove-tag-btn');
+        // 准确选取 '黄瓜' 对应的删除按钮
+        const removeBtn = document.querySelector('.remove-tag-btn[data-index="0"]');
         expect(removeBtn).not.toBeNull();
         removeBtn.click();
 
@@ -78,7 +79,6 @@ describe('Pantry Module Unit Tests (食材库模块)', () => {
     });
 
     it('5. 拍小票识别成功后，应自动解析食材并加入食材库', async () => {
-        // Mock Gemini 返回数据结构
         geminiApi.scanImageForIngredients.mockResolvedValueOnce({
             items: ['土豆', '牛肉']
         });
@@ -86,17 +86,14 @@ describe('Pantry Module Unit Tests (食材库模块)', () => {
         initPantryModule();
         const fileInput = document.getElementById('receipt-file-input');
 
-        // 模拟上传图片文件
         const fakeFile = new File(['fake-image-content'], 'receipt.png', { type: 'image/png' });
         
-        // 触发 fileInput 的 change 事件
         Object.defineProperty(fileInput, 'files', {
             value: [fakeFile]
         });
         
         fileInput.dispatchEvent(new Event('change'));
 
-        // 等待异步识别逻辑完成
         await new Promise(resolve => setTimeout(resolve, 100));
 
         const container = document.getElementById('pantry-tags-container');
