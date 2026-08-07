@@ -243,11 +243,6 @@
         let profile = { taste: [], cuisine: [] };
 
         document.addEventListener('DOMContentLoaded', () => {
-            // 自动预设并保存 API Key，无需手动弹窗输入
-            if (!localStorage.getItem('gemini_api_key')) {
-                localStorage.setItem('gemini_api_key', 'AQ.Ab8RN6I0j1Gn-HFj6-HInPUnJRssfgx8XCegDheJkIT3pNTFOw');
-            }
-        
             loadPantry();
             loadProfile();
             cleanExpiredItems();
