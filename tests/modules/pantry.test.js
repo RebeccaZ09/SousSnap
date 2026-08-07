@@ -1,116 +1,107 @@
 /**
  * @jest-environment jsdom
  */
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { initPantryModule, getPantryList } from '../../js/modules/pantry.js';
+import * as geminiApi from '../../js/api/gemini.js';
 
-import { PantryManager } from '../js/pantryManager.js';
+// Mock gemini API 模块中的 scanImageForIngredients 函数
+vi.mock('../../js/api/gemini.js', () => ({
+    scanImageForIngredients: vi.fn()
+}));
 
-describe('食材库编辑弹窗与交互 (Pantry Modal Unit Tests)', () => {
-    let pantryManager;
-
+describe('Pantry Module Unit Tests (食材库模块)', () => {
     beforeEach(() => {
-        // 构建所需的 DOM 结构
-        document.body.innerHTML = `
-            <div id="pantryList"></div>
-            <div id="editIngredientModal" class="modal hidden">
-                <input type="hidden" id="editIngredientId">
-                <input type="text" id="editIngredientName">
-                <select id="editIngredientCategory">
-                    <option value="vegetable">🥦 蔬菜水果</option>
-                    <option value="meat">🥩 肉类禽蛋</option>
-                    <option value="seafood">🐟 水产海鲜</option>
-                    <option value="staple">🌾 粮油米面</option>
-                    <option value="condiment">🧂 调味料</option>
-                    <option value="other">📦 其他</option>
-                </select>
-                <input type="date" id="editIngredientExpiry">
-                <button id="btnSaveIngredient">保存修改</button>
-                <button id="btnDeleteIngredient">删除食材</button>
-                <button id="btnCloseEditIngredient">✕</button>
-            </div>
-        `;
-
-        // 清除 localStorage 缓存
+        // 清理 localStorage 与 DOM
         localStorage.clear();
-
-        // 初始化 PantryManager 实例
-        pantryManager = new PantryManager();
-        pantryManager.init();
-    });
-
-    test('1. 打开编辑弹窗时，应正确填充食材的初始数据', () => {
-        const item = {
-            id: 'item-123',
-            name: '西兰花',
-            category: 'vegetable',
-            expiry: '2026-08-15'
-        };
+        document.body.innerHTML = `
+            <div id="pantry-tags-container"></div>
+            <input id="new-ingredient-input" type="text" />
+            <button id="add-ingredient-btn">添加</button>
+            <button id="scan-receipt-btn">📷 拍小票/食材导入</button>
+            <input type="file" id="receipt-file-input" />
+        `;
         
-        pantryManager.openEditModal(item);
-
-        expect(document.getElementById('editIngredientModal').classList.contains('hidden')).toBe(false);
-        expect(document.getElementById('editIngredientId').value).toBe('item-123');
-        expect(document.getElementById('editIngredientName').value).toBe('西兰花');
-        expect(document.getElementById('editIngredientCategory').value).toBe('vegetable');
-        expect(document.getElementById('editIngredientExpiry').value).toBe('2026-08-15');
+        // 屏蔽 alert 系统弹窗
+        vi.spyOn(window, 'alert').mockImplementation(() => {});
+        vi.clearAllMocks();
     });
 
-    test('2. 保存修改后，应更新食材数据并关闭弹窗', () => {
-        // 初始写入一条数据
-        const initialPantry = [{ id: 'item-123', name: '西兰花', category: 'vegetable', expiry: '2026-08-15' }];
-        localStorage.setItem('pantry_items', JSON.stringify(initialPantry));
-        pantryManager.loadPantry();
-
-        // 打开并修改数据
-        pantryManager.openEditModal(initialPantry[0]);
-        document.getElementById('editIngredientName').value = '有机西兰花';
-        document.getElementById('editIngredientCategory').value = 'vegetable';
-        document.getElementById('editIngredientExpiry').value = '2026-08-20';
-
-        // 模拟点击保存
-        document.getElementById('btnSaveIngredient').click();
-
-        // 验证 DOM 与 Storage 状态
-        const updatedPantry = JSON.parse(localStorage.getItem('pantry_items'));
-        expect(updatedPantry[0].name).toBe('有机西兰花');
-        expect(updatedPantry[0].expiry).toBe('2026-08-20');
-        expect(document.getElementById('editIngredientModal').classList.contains('hidden')).toBe(true);
+    it('1. 初始化时，若食材库为空应显示提示信息', () => {
+        initPantryModule();
+        const container = document.getElementById('pantry-tags-container');
+        expect(container.innerHTML).toContain('食材库暂无内容');
     });
 
-    test('3. 点击删除按钮时，应正确删除该食材并关闭弹窗', () => {
-        const initialPantry = [
-            { id: 'item-123', name: '西兰花', category: 'vegetable' },
-            { id: 'item-456', name: '牛肉', category: 'meat' }
-        ];
-        localStorage.setItem('pantry_items', JSON.stringify(initialPantry));
-        pantryManager.loadPantry();
+    it('2. 手动输入食材名称并点击添加按钮，应成功添加并渲染标签', () => {
+        initPantryModule();
+        const input = document.getElementById('new-ingredient-input');
+        const addBtn = document.getElementById('add-ingredient-btn');
 
-        // 打开 item-123
-        pantryManager.openEditModal(initialPantry[0]);
+        input.value = '西红柿';
+        addBtn.click();
+
+        const container = document.getElementById('pantry-tags-container');
+        expect(container.innerHTML).toContain('西红柿');
+        expect(getPantryList().some(item => item.name === '西红柿')).toBe(true);
+        expect(input.value).toBe('');
+    });
+
+    it('3. 在输入框按 Enter 键，应支持添加食材', () => {
+        initPantryModule();
+        const input = document.getElementById('new-ingredient-input');
+
+        input.value = '鸡蛋';
+        input.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter' }));
+
+        const container = document.getElementById('pantry-tags-container');
+        expect(container.innerHTML).toContain('鸡蛋');
+        expect(getPantryList().some(item => item.name === '鸡蛋')).toBe(true);
+    });
+
+    it('4. 点击食材标签上的删除按钮 &times; 应将其移除', () => {
+        initPantryModule();
+        const input = document.getElementById('new-ingredient-input');
+        const addBtn = document.getElementById('add-ingredient-btn');
+
+        input.value = '黄瓜';
+        addBtn.click();
+
+        // 模拟点击移除按钮
+        const removeBtn = document.querySelector('.remove-tag-btn');
+        expect(removeBtn).not.toBeNull();
+        removeBtn.click();
+
+        const container = document.getElementById('pantry-tags-container');
+        expect(container.innerHTML).not.toContain('黄瓜');
+        expect(getPantryList().some(item => item.name === '黄瓜')).toBe(false);
+    });
+
+    it('5. 拍小票识别成功后，应自动解析食材并加入食材库', async () => {
+        // Mock Gemini 返回数据结构
+        geminiApi.scanImageForIngredients.mockResolvedValueOnce({
+            items: ['土豆', '牛肉']
+        });
+
+        initPantryModule();
+        const fileInput = document.getElementById('receipt-file-input');
+
+        // 模拟上传图片文件
+        const fakeFile = new File(['fake-image-content'], 'receipt.png', { type: 'image/png' });
         
-        // 点击删除
-        document.getElementById('btnDeleteIngredient').click();
+        // 触发 fileInput 的 change 事件
+        Object.defineProperty(fileInput, 'files', {
+            value: [fakeFile]
+        });
+        
+        fileInput.dispatchEvent(new Event('change'));
 
-        // 验证删除结果
-        const updatedPantry = JSON.parse(localStorage.getItem('pantry_items'));
-        expect(updatedPantry.length).toBe(1);
-        expect(updatedPantry[0].id).toBe('item-456');
-        expect(document.getElementById('editIngredientModal').classList.contains('hidden')).toBe(true);
-    });
+        // 等待异步识别逻辑完成
+        await new Promise(resolve => setTimeout(resolve, 100));
 
-    test('4. 点击关闭按钮，应仅关闭弹窗而不修改数据', () => {
-        const initialPantry = [{ id: 'item-123', name: '西兰花', category: 'vegetable' }];
-        localStorage.setItem('pantry_items', JSON.stringify(initialPantry));
-        pantryManager.loadPantry();
-
-        pantryManager.openEditModal(initialPantry[0]);
-        document.getElementById('editIngredientName').value = '修改未保存名称';
-
-        // 点击关闭
-        document.getElementById('btnCloseEditIngredient').click();
-
-        // 验证未被更新
-        const currentPantry = JSON.parse(localStorage.getItem('pantry_items'));
-        expect(currentPantry[0].name).toBe('西兰花');
-        expect(document.getElementById('editIngredientModal').classList.contains('hidden')).toBe(true);
+        const container = document.getElementById('pantry-tags-container');
+        expect(container.innerHTML).toContain('土豆');
+        expect(container.innerHTML).toContain('牛肉');
+        expect(window.alert).toHaveBeenCalledWith(expect.stringContaining('成功识别出 2 种食材'));
     });
 });
