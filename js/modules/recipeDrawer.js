@@ -5,59 +5,63 @@ let activeDish = null;
 
 export function openRecipeDrawer(dish) {
     activeDish = dish;
-    const drawer = document.getElementById('recipe-drawer');
+    const drawer = document.getElementById('recipeDrawer');
     if (!drawer) return;
 
     renderDrawerContent(dish);
-    drawer.classList.add('open');
+    drawer.classList.add('active');
 }
 
 export function closeRecipeDrawer() {
-    const drawer = document.getElementById('recipe-drawer');
-    if (drawer) drawer.classList.remove('open');
+    const drawer = document.getElementById('recipeDrawer');
+    if (drawer) drawer.classList.remove('active');
 }
 
 function renderDrawerContent(dish) {
-    document.getElementById('drawer-dish-title').innerText = dish.dish_name || '菜谱详情';
+    const titleEl = document.getElementById('drawerTitle');
+    if (titleEl) titleEl.innerText = dish.dish_name || '菜谱详情';
     
-    const ingredientsContainer = document.getElementById('drawer-ingredients');
+    const ingredientsContainer = document.getElementById('drawerIngredients');
     if (ingredientsContainer) {
         const list = dish.ingredients || [];
-        ingredientsContainer.innerHTML = list.map(i => `<li>${i}</li>`).join('');
+        ingredientsContainer.innerHTML = list.map(i => `<span class="ing-tag">${i}</span>`).join('');
     }
 
-    const stepsContainer = document.getElementById('drawer-steps');
+    const stepsContainer = document.getElementById('drawerSteps');
     if (stepsContainer) {
         stepsContainer.innerText = dish.steps || '暂无详细步骤';
     }
 }
 
 export function initRecipeDrawerEvents() {
-    const closeBtn = document.getElementById('close-drawer-btn');
-    if (closeBtn) closeBtn.addEventListener('click', closeRecipeDrawer);
+    const closeBtn = document.getElementById('btnCloseDrawer');
+    const overlay = document.getElementById('drawerOverlay');
 
-    const refineBtn = document.getElementById('refine-dish-btn');
-    const refineInput = document.getElementById('refine-input');
+    if (closeBtn) closeBtn.addEventListener('click', closeRecipeDrawer);
+    if (overlay) overlay.addEventListener('click', closeRecipeDrawer);
+
+    const refineBtn = document.getElementById('btnApplyAiTutor');
+    const refineInput = document.getElementById('aiTutorInput');
 
     if (refineBtn && refineInput) {
         refineBtn.addEventListener('click', async () => {
             const feedback = refineInput.value.trim();
-            if (!feedback) return alert('请输入改进调整意向（如：想换成少油做法，或替换为鸡胸肉）');
+            if (!feedback) return alert('请输入微调想法（例如：换个不辣的做法/少油）');
 
             refineBtn.disabled = true;
-            refineBtn.innerText = '大厨调整中...';
+            refineBtn.innerText = '调整中...';
 
             try {
                 const newDish = await refineSingleDish(activeDish, feedback);
                 activeDish = newDish;
                 renderDrawerContent(newDish);
                 refineInput.value = '';
-                alert('菜谱调整成功！');
+                alert('大厨已为你更新菜谱！');
             } catch (err) {
                 alert(`调整失败: ${err.message}`);
             } finally {
                 refineBtn.disabled = false;
-                refineBtn.innerText = '💡 大厨指导微调';
+                refineBtn.innerText = '重构';
             }
         });
     }
