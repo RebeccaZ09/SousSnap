@@ -1,26 +1,16 @@
-name: Unit Tests
+# .github/workflows/test.yml
+name: Run Unit Tests
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+on: [push, pull_request]
 
 jobs:
   test:
     runs-on: ubuntu-latest
-
     steps:
-      - name: 拉取代码
-        uses: actions/checkout@v4
-
-      - name: 配置 Node.js 环境
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-
-      - name: 云端自动安装依赖
-        run: npm install
-
-      - name: 云端运行单元测试
-        run: npm test
+          node-version: 22
+      - run: npm ci
+      - run: npm test
