@@ -2,6 +2,9 @@
 import { getAppConfig, getUserPreferences } from '../config.js';
 import { getFavoritesList } from '../modules/favorites.js';
 
+export const GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+
 function cleanAndParseJSON(text) {
     let cleanText = text.replace(/```json/gi, '').replace(/```/g, '').trim();
     return JSON.parse(cleanText);
@@ -19,24 +22,60 @@ export async function generateWeeklyPlanner(pantryList = []) {
 
 // js/api/gemini.js
 export async function scanImageForIngredients(base64Image, apiKey) {
-    if (!apiKey) throw new Error('API Key is required');
-    
-    // 构造 Gemini Vision API 请求结构...
-    const response = await fetchGeminiVisionApi(base64Image, apiKey);
-    return response.ingredients || [];
+    if (!apiKey) {
+        throw new Error('API Key is required');
+    }
+
+    const response = await fetch(`${GEMINI_BASE_URL}/${GEMINI_MODEL}:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            contents: [{
+                parts: [
+                    { text: "Identify all food ingredients in this image and return a JSON object with key 'items' containing an array of string ingredient names." },
+                    { inline_data: { mime_type: "image/png", data: base64Image } }
+                ]
+            }],
+            generationConfig: {
+                responseMimeType: "application/json"
+            }
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error(`Gemini API Error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    return JSON.parse(text);
 }
 
 export async function refineSingleDish(dishName, modificationInstruction, apiKey) {
-    if (!apiKey) throw new Error('API Key is required');
+    if (!apiKey) {
+        throw new Error('API Key is required');
+    }
 
-    // 假设调用 Gemini 生成菜谱重构 JSON
-    const result = await fetchGeminiApi(...); 
-    
-    return {
-        dish_name: result.dish_name || dishName,
-        ingredients: result.ingredients || [],
-        steps: result.steps || []
-    };
+    const response = await fetch(`${GEMINI_BASE_URL}/${GEMINI_MODEL}:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            contents: [{
+                parts: [{ text: `Modify recipe for ${dishName}: ${modificationInstruction}` }]
+            }],
+            generationConfig: {
+                responseMimeType: "application/json"
+            }
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error(`Gemini API Error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    return JSON.parse(text);
 }
 
 async function fetchPlanFromGemini(pantryList, mode = 'weekly') {
