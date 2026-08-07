@@ -65,6 +65,7 @@
                     <input type="text" id="manualIngredientInput" class="input-field" placeholder="手动添加食材...">
                     <button class="btn-primary-sm" id="btnAddIngredient">添加</button>
                 </div>
+                <!-- 需求 6：食材库卡片展示与交互区域 -->
                 <div id="pantryList" class="pantry-list"></div>
             </div>
         </section>
@@ -133,6 +134,44 @@
                     <button class="btn-primary-sm" id="btnApplyAiTutor">重构</button>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- 需求 6 增加：编辑/查看食材详情模态框 (Edit Ingredient Modal) -->
+<div id="editIngredientModal" class="modal">
+    <div class="modal-body">
+        <div class="modal-header">
+            <h3>✏️ 编辑食材</h3>
+            <button class="modal-close" id="btnCloseEditIngredient">✕</button>
+        </div>
+        
+        <div class="modal-content">
+            <input type="hidden" id="editIngredientId">
+            <div class="setting-group">
+                <label class="setting-label">食材名称</label>
+                <input type="text" id="editIngredientName" class="input-field" placeholder="如：西兰花">
+            </div>
+            <div class="setting-group">
+                <label class="setting-label">食材分类</label>
+                <select id="editIngredientCategory" class="select-field">
+                    <option value="vegetable">🥦 蔬菜水果</option>
+                    <option value="meat">🥩 肉类禽蛋</option>
+                    <option value="seafood">🐟 水产海鲜</option>
+                    <option value="staple">🌾 粮油米面</option>
+                    <option value="condiment">🧂 调味料</option>
+                    <option value="other">📦 其他</option>
+                </select>
+            </div>
+            <div class="setting-group">
+                <label class="setting-label">保质期 / 过期时间</label>
+                <input type="date" id="editIngredientExpiry" class="input-field">
+            </div>
+        </div>
+
+        <div class="modal-footer" style="display: flex; gap: 8px;">
+            <button class="btn-secondary" id="btnDeleteIngredient" style="color: #e53e3e;">删除食材</button>
+            <button class="btn-primary" id="btnSaveIngredient">保存修改</button>
         </div>
     </div>
 </div>
