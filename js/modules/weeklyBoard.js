@@ -14,18 +14,18 @@ export function initWeeklyBoardModule() {
 }
 
 function setupBoardControls() {
-    const generateBtn = document.getElementById('generate-weekly-btn');
+    const generateBtn = document.getElementById('btnGenerateWeekly');
     if (generateBtn) {
         generateBtn.addEventListener('click', handleGeneratePlan);
     }
 }
 
 async function handleGeneratePlan() {
-    const btn = document.getElementById('generate-weekly-btn');
-    if (btn) {
-        btn.disabled = true;
-        btn.innerText = '✨ 智能生成中...';
-    }
+    const btn = document.getElementById('btnGenerateWeekly');
+    const loadingState = document.getElementById('loadingState');
+    
+    if (btn) btn.disabled = true;
+    if (loadingState) loadingState.classList.remove('hidden');
 
     try {
         const pantry = getPantryList();
@@ -41,54 +41,49 @@ async function handleGeneratePlan() {
     } catch (err) {
         alert(`生成菜单失败: ${err.message}`);
     } finally {
-        if (btn) {
-            btn.disabled = false;
-            btn.innerText = '✨ 生成本周灵感菜单';
-        }
+        if (btn) btn.disabled = false;
+        if (loadingState) loadingState.classList.add('hidden');
     }
 }
 
 export async function renderWeeklyBoard(planArray) {
-    const boardContainer = document.getElementById('weekly-board-container');
+    const boardContainer = document.getElementById('weeklyBoard');
     if (!boardContainer) return;
 
     boardContainer.innerHTML = '';
 
     for (const dayData of planArray) {
-        const dayCard = document.createElement('div');
-        dayCard.className = 'day-card';
-        dayCard.innerHTML = `<h3 class="day-title">${dayData.day}</h3>`;
+        const col = document.createElement('div');
+        col.className = 'board-column';
+        col.innerHTML = `<div class="column-header"><span>${dayData.day}</span></div>`;
 
         const mealTypes = [
-            { key: 'breakfast', label: '早餐' },
-            { key: 'lunch', label: '午餐' },
-            { key: 'dinner', label: '晚餐' }
+            { key: 'breakfast', label: '🍳 早餐' },
+            { key: 'lunch', label: '🍱 午餐' },
+            { key: 'dinner', label: '🍲 晚餐' }
         ];
 
         for (const type of mealTypes) {
-            const section = document.createElement('div');
-            section.className = 'meal-section';
-            section.innerHTML = `<h4 class="meal-type-label">${type.label}</h4>`;
+            const block = document.createElement('div');
+            block.className = 'meal-block';
+            block.innerHTML = `<div class="meal-label">${type.label}</div>`;
 
             const dishes = dayData[type.key] || [];
             for (const dish of dishes) {
                 const dishCard = document.createElement('div');
-                dishCard.className = 'dish-card';
+                dishCard.className = 'dish-card-mini';
                 dishCard.onclick = () => openRecipeDrawer(dish);
 
                 const imageUrl = await fetchDishImage(dish.image_search_kw, dish.dish_name);
 
                 dishCard.innerHTML = `
-                    <img src="${imageUrl}" class="dish-thumb" alt="${dish.dish_name}" loading="lazy" />
-                    <div class="dish-info">
-                        <div class="dish-name">${dish.dish_name}</div>
-                        <div class="dish-ingredients-preview">${(dish.ingredients || []).join('、')}</div>
-                    </div>
+                    <img src="${imageUrl}" class="dish-thumb-mini" alt="${dish.dish_name}" loading="lazy" />
+                    <div class="dish-title-mini">${dish.dish_name}</div>
                 `;
-                section.appendChild(dishCard);
+                block.appendChild(dishCard);
             }
-            dayCard.appendChild(section);
+            col.appendChild(block);
         }
-        boardContainer.appendChild(dayCard);
+        boardContainer.appendChild(col);
     }
 }
