@@ -9,8 +9,24 @@ let currentWeeklyPlan = JSON.parse(localStorage.getItem('soussnap_current_plan')
 
 export function initWeeklyBoardModule() {
     setupBoardControls();
-    if (currentWeeklyPlan) {
-        renderWeeklyBoard(currentWeeklyPlan);
+    
+    // 🔥 核心修改：检查本地缓存的菜单和模式
+    const savedPlan = localStorage.getItem('soussnap_current_plan');
+    const savedMode = localStorage.getItem('soussnap_plan_mode') || 'weekly';
+
+    if (savedPlan) {
+        try {
+            currentWeeklyPlan = JSON.parse(savedPlan);
+            renderWeeklyBoard(currentWeeklyPlan);
+            
+            // 如果上次是单日菜单，可以把标题动态改成“今日三餐规划”以保持一致
+            if (savedMode === 'daily') {
+                const titleEl = document.querySelector('#tab-planner .section-header h2');
+                if (titleEl) titleEl.innerHTML = '☀️ 今日三餐规划';
+            }
+        } catch (e) {
+            console.error("解析缓存菜单失败:", e);
+        }
     }
 }
 
@@ -38,7 +54,11 @@ async function handleGenerate(mode = 'weekly') {
 
         if (planData && planData.weeklyPlan) {
             currentWeeklyPlan = planData.weeklyPlan;
+            
+            // 🔥 核心修改：把当前的 mode ('daily' 或 'weekly') 也存进缓存
             localStorage.setItem('soussnap_current_plan', JSON.stringify(currentWeeklyPlan));
+            localStorage.setItem('soussnap_plan_mode', mode); 
+
             await renderWeeklyBoard(currentWeeklyPlan);
         }
     } catch (err) {
