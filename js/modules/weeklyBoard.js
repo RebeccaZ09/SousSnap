@@ -1,6 +1,6 @@
 // js/modules/weeklyBoard.js
 import { generateWeeklyPlanner, generateDailyPlanner } from '../api/gemini.js';
-import { fetchDishImage } from '../api/imageSearch.js';
+// 不再需要在看板中引入 fetchDishImage
 import { getPantryList } from './pantry.js';
 import { openRecipeDrawer } from './recipeDrawer.js';
 import { isFavorite, toggleFavorite } from './favorites.js';
@@ -10,7 +10,7 @@ let currentWeeklyPlan = JSON.parse(localStorage.getItem('soussnap_current_plan')
 export function initWeeklyBoardModule() {
     setupBoardControls();
     
-    // 🔥 核心修改：检查本地缓存的菜单和模式
+    // 初始化时恢复上次的菜单和模式
     const savedPlan = localStorage.getItem('soussnap_current_plan');
     const savedMode = localStorage.getItem('soussnap_plan_mode') || 'weekly';
 
@@ -19,7 +19,6 @@ export function initWeeklyBoardModule() {
             currentWeeklyPlan = JSON.parse(savedPlan);
             renderWeeklyBoard(currentWeeklyPlan);
             
-            // 如果上次是单日菜单，可以把标题动态改成“今日三餐规划”以保持一致
             if (savedMode === 'daily') {
                 const titleEl = document.querySelector('#tab-planner .section-header h2');
                 if (titleEl) titleEl.innerHTML = '☀️ 今日三餐规划';
@@ -54,10 +53,14 @@ async function handleGenerate(mode = 'weekly') {
 
         if (planData && planData.weeklyPlan) {
             currentWeeklyPlan = planData.weeklyPlan;
-            
-            // 🔥 核心修改：把当前的 mode ('daily' 或 'weekly') 也存进缓存
             localStorage.setItem('soussnap_current_plan', JSON.stringify(currentWeeklyPlan));
-            localStorage.setItem('soussnap_plan_mode', mode); 
+            localStorage.setItem('soussnap_plan_mode', mode);
+
+            // 动态切换标题
+            const titleEl = document.querySelector('#tab-planner .section-header h2');
+            if (titleEl) {
+                titleEl.innerHTML = mode === 'daily' ? '☀️ 今日三餐规划' : '📅 本周三餐规划';
+            }
 
             await renderWeeklyBoard(currentWeeklyPlan);
         }
@@ -95,20 +98,19 @@ export async function renderWeeklyBoard(planArray) {
                 const dishCard = document.createElement('div');
                 dishCard.className = 'dish-card-mini';
 
-                const imageUrl = await fetchDishImage(dish.image_search_kw, dish.dish_name);
                 const hasFav = isFavorite(dish.dish_name);
 
+                // 🔥 核心改动：看板中不再渲染图片，只展示菜名和红心按钮，秒开无延迟
                 dishCard.innerHTML = `
-                    <div class="image-wrapper" style="position: relative;">
-                        <img src="${imageUrl}" class="dish-thumb-mini" alt="${dish.dish_name}" loading="lazy" />
-                        <button class="fav-heart-btn ${hasFav ? 'active' : ''}" style="position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.5); border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; color: white; font-size: 14px; display: flex; align-items: center; justify-content: center;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 4px 0;">
+                        <span class="dish-title-mini" style="flex: 1; font-weight: 500;">${dish.dish_name}</span>
+                        <button class="fav-heart-btn ${hasFav ? 'active' : ''}" style="background: none; border: none; cursor: pointer; font-size: 16px; padding: 2px 6px;">
                             ${hasFav ? '❤️' : '🤍'}
                         </button>
                     </div>
-                    <div class="dish-title-mini">${dish.dish_name}</div>
                 `;
 
-                // 点击爱心切换金榜状态（阻止冒泡以免触发打开菜谱）
+                // 点击爱心切换金榜状态
                 const heartBtn = dishCard.querySelector('.fav-heart-btn');
                 heartBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -117,7 +119,7 @@ export async function renderWeeklyBoard(planArray) {
                     heartBtn.classList.toggle('active', isNowFav);
                 });
 
-                // 点击卡片其它区域打开详情
+                // 点击卡片打开详情抽屉
                 dishCard.addEventListener('click', () => openRecipeDrawer(dish));
 
                 block.appendChild(dishCard);
