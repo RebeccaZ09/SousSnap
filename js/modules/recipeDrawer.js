@@ -1,5 +1,6 @@
 // js/modules/recipeDrawer.js
 import { refineSingleDish } from '../api/gemini.js';
+import { isFavorite, toggleFavorite } from './favorites.js';
 
 let activeDish = null;
 
@@ -18,35 +19,52 @@ export function closeRecipeDrawer() {
 }
 
 function renderDrawerContent(dish) {
+    // 1. 渲染标题
     const titleEl = document.getElementById('drawerTitle');
     if (titleEl) titleEl.innerText = dish.dish_name || '菜谱详情';
-    
-    // 检查是否有本地存储的自定义图片
-    const storageKey = `soussnap_img_${dish.dish_name}`;
-    const customImg = localStorage.getItem(storageKey);
 
-    // 假设你在 HTML 里有一个图片容器 #drawerImageContainer 和一个图片标签 #drawerImage 以及上传按钮 #btnUploadPhoto
-    // 如果没有，你可以通过下面动态控制或在 HTML 准备好
-    const heroContainer = document.getElementById('drawerHeroContainer'); // 抽屉顶部的图片/上传区域
+    // 2. 渲染收藏按钮状态
+    const favBtn = document.getElementById('drawerFavBtn');
+    if (favBtn) {
+        const hasFav = isFavorite(dish.dish_name);
+        favBtn.innerHTML = hasFav ? '❤️' : '🤍';
+        
+        // 防止重复绑定事件，先克隆或直接赋值 onclick
+        favBtn.onclick = (e) => {
+            e.stopPropagation();
+            const isNowFav = toggleFavorite(dish);
+            favBtn.innerHTML = isNowFav ? '❤️' : '🤍';
+        };
+    }
     
+    // 3. 核心：渲染顶部的图片或“拍照上传”占位区
+    const heroContainer = document.querySelector('.drawer-hero-container');
     if (heroContainer) {
-        heroContainer.innerHTML = `
-            ${customImg ? `
-                <div style="position: relative; width: 100%; border-radius: 12px; overflow: hidden; margin-bottom: 12px;">
-                    <img src="${customImg}" alt="${dish.dish_name}" style="width: 100%; max-height: 220px; object-fit: cover; display: block;" />
-                    <button id="btnChangePhoto" style="position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.6); color: white; border: none; padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer;">更换图片</button>
-                </div>
-            ` : `
-                <div style="background: #f8f9fa; border: 2px dashed #ddd; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 12px; cursor: pointer;" id="btnUploadPhotoPlaceholder">
-                    <div style="font-size: 28px; margin-bottom: 6px;">📷</div>
-                    <div style="font-size: 14px; color: #666; font-weight: 500;">添加我做这道菜的实拍图</div>
-                    <div style="font-size: 12px; color: #aaa; margin-top: 2px;">记录属于你的私房菜</div>
-                </div>
-            `}
-            <input type="file" id="recipePhotoInput" accept="image/*" style="display: none;" />
-        `;
+        const storageKey = `soussnap_img_${dish.dish_name}`;
+        const customImg = localStorage.getItem(storageKey);
 
-        // 绑定上传触发事件
+        if (customImg) {
+            // 如果用户上传过图片，展示实拍图并提供“更换图片”按钮
+            heroContainer.innerHTML = `
+                <div style="position: relative; width: 100%; border-radius: 12px; overflow: hidden;">
+                    <img src="${customImg}" class="drawer-hero-img" alt="${dish.dish_name}" style="width: 100%; height: 200px; object-fit: cover; display: block;" />
+                    <button id="btnChangePhoto" style="position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.6); color: white; border: none; padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer;">更换图片</button>
+                </div>
+                <input type="file" id="recipePhotoInput" accept="image/*" style="display: none;" />
+            `;
+        } else {
+            // 如果没有上传过，显示精美的拍照/上传提示框
+            heroContainer.innerHTML = `
+                <div id="btnUploadPhotoPlaceholder" style="background: #f8f9fa; border: 2px dashed #ddd; border-radius: 12px; padding: 28px; text-align: center; cursor: pointer; width: 100%;">
+                    <div style="font-size: 26px; margin-bottom: 4px;">📷</div>
+                    <div style="font-size: 14px; color: #555; font-weight: 500;">添加我做这道菜的实拍图</div>
+                    <div style="font-size: 11px; color: #999; margin-top: 2px;">记录属于你的私房菜</div>
+                </div>
+                <input type="file" id="recipePhotoInput" accept="image/*" style="display: none;" />
+            `;
+        }
+
+        // 绑定文件选择触发逻辑
         const fileInput = document.getElementById('recipePhotoInput');
         const triggerBtn = document.getElementById('btnChangePhoto') || document.getElementById('btnUploadPhotoPlaceholder');
         
@@ -59,9 +77,9 @@ function renderDrawerContent(dish) {
                     const reader = new FileReader();
                     reader.onload = (event) => {
                         const base64Str = event.target.result;
-                        // 永久保存在 localStorage 中
+                        // 永久保存在本地 localStorage 中
                         localStorage.setItem(storageKey, base64Str);
-                        // 重新渲染抽屉以显示图片
+                        // 局部刷新抽屉以立刻显示刚拍的照片
                         renderDrawerContent(dish);
                     };
                     reader.readAsDataURL(file);
@@ -70,12 +88,14 @@ function renderDrawerContent(dish) {
         }
     }
 
+    // 4. 渲染食材用量
     const ingredientsContainer = document.getElementById('drawerIngredients');
     if (ingredientsContainer) {
         const list = dish.ingredients || [];
         ingredientsContainer.innerHTML = list.map(i => `<span class="ing-tag">${i}</span>`).join('');
     }
 
+    // 5. 渲染烹饪步骤
     const stepsContainer = document.getElementById('drawerSteps');
     if (stepsContainer) {
         stepsContainer.innerText = dish.steps || '暂无详细步骤';
@@ -101,7 +121,7 @@ export function initRecipeDrawerEvents() {
             refineBtn.innerText = '调整中...';
 
             try {
-                const newDish = await refineSingleDish(activeDish, feedback);
+                const newDish = await refineSingleDish(activeDish.dish_name, feedback);
                 activeDish = newDish;
                 renderDrawerContent(newDish);
                 refineInput.value = '';
