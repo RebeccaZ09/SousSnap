@@ -5,6 +5,10 @@
     overflow-x: auto;
     padding-bottom: 12px;
     scroll-snap-type: x mandatory;
+    
+    /* 添加以下属性以确保它占满宽度 */
+    width: 100vw;       /* 强制视口宽度 */
+    margin-left: calc(-50vw + 50%); /* 如果该容器被父元素居中，这行可以强制拉伸到屏幕边缘 */
 }
 
 .board-column {
