@@ -1,5 +1,5 @@
 // js/modules/weeklyBoard.js
-import { generateWeeklyPlanner, generateDailyPlanner } from '../api/gemini.js';
+import { generateWeeklyPlanner, generateDailyPlanner, generateSingleReplacementDish } from '../api/gemini.js';
 import { getPantryList } from './pantry.js';
 import { openRecipeDrawer } from './recipeDrawer.js';
 import { isFavorite, toggleFavorite } from './favorites.js';
@@ -75,7 +75,6 @@ export function renderWeeklyBoard(planArray) {
     boardContainer.innerHTML = '';
     const currentMode = localStorage.getItem('soussnap_plan_mode') || 'weekly';
 
-    // 适配单日或周视图的容器样式与全屏类
     if (currentMode === 'daily') {
         boardContainer.classList.add('daily-full-mode');
         boardContainer.style.gridTemplateColumns = '1fr';
@@ -84,7 +83,8 @@ export function renderWeeklyBoard(planArray) {
         boardContainer.style.gridTemplateColumns = '';
     }
 
-    for (const dayData of planArray) {
+    // 遍历星期（dayIndex）
+    planArray.forEach((dayData, dayIndex) => {
         const col = document.createElement('div');
         col.className = 'board-column';
         col.innerHTML = `<div class="column-header"><span>${dayData.day}</span></div>`;
@@ -95,17 +95,16 @@ export function renderWeeklyBoard(planArray) {
             { key: 'dinner', label: '🍲 晚餐' }
         ];
 
-        for (const type of mealTypes) {
+        mealTypes.forEach(type => {
             const block = document.createElement('div');
             block.className = 'meal-block';
             block.innerHTML = `<div class="meal-label">${type.label}</div>`;
 
             const dishes = dayData[type.key] || [];
-            for (const dish of dishes) {
+            dishes.forEach((dish, dishIndex) => {
                 const dishCard = document.createElement('div');
                 const hasFav = isFavorite(dish.dish_name);
 
-                // 单日模式下强制宽度 100%，左右撑满；周模式保持紧凑
                 dishCard.className = 'dish-card-item';
                 dishCard.style.cssText = `
                     display: flex; 
@@ -122,16 +121,47 @@ export function renderWeeklyBoard(planArray) {
                 `;
 
                 dishCard.innerHTML = `
-                    <div style="flex: 1; padding-right: 12px;">
-                        <div style="font-weight: 600; font-size: ${currentMode === 'daily' ? '16px' : '15px'}; color: #333;">${dish.dish_name}</div>
-                        ${currentMode === 'daily' && dish.ingredients ? `<div style="font-size: 13px; color: #775555; margin-top: 3px;">主料: ${dish.ingredients.slice(0, 4).join(', ')}</div>` : ''}
+                    <div style="flex: 1; padding-right: 8px;">
+                        <div style="font-weight: 600; font-size: ${currentMode === 'daily' ? '16px' : '15px'}; color: var(--text-main, #333);">${dish.dish_name}</div>
+                        ${currentMode === 'daily' && dish.ingredients ? `<div style="font-size: 13px; color: var(--text-secondary, #775555); margin-top: 3px;">主料: ${dish.ingredients.slice(0, 4).join(', ')}</div>` : ''}
                     </div>
-                    <button class="fav-heart-btn ${hasFav ? 'active' : ''}" style="background: none; border: none; cursor: pointer; font-size: 20px; padding: 6px; flex-shrink: 0;">
-                        ${hasFav ? '❤️' : '🤍'}
-                    </button>
+                    <div style="display: flex; align-items: center; gap: 2px; flex-shrink: 0;">
+                        <!-- 换菜按钮 -->
+                        <button class="replace-dish-btn" title="换个新菜" style="background: none; border: none; cursor: pointer; font-size: 16px; padding: 6px; transition: transform 0.3s;">
+                            🔄
+                        </button>
+                        <!-- 收藏红心按钮 -->
+                        <button class="fav-heart-btn ${hasFav ? 'active' : ''}" style="background: none; border: none; cursor: pointer; font-size: 20px; padding: 6px;">
+                            ${hasFav ? '❤️' : '🤍'}
+                        </button>
+                    </div>
                 `;
 
-                // 点击爱心切换金榜状态
+                // 1. 点击换菜按钮逻辑
+                const replaceBtn = dishCard.querySelector('.replace-dish-btn');
+                replaceBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    replaceBtn.style.transform = 'rotate(180deg)';
+                    replaceBtn.disabled = true;
+
+                    try {
+                        const newDish = await generateSingleReplacementDish(type.key, dish.dish_name);
+                        if (newDish && newDish.dish_name) {
+                            // 更新内存中的对应数据
+                            currentWeeklyPlan[dayIndex][type.key][dishIndex] = newDish;
+                            // 同步回 localStorage
+                            localStorage.setItem('soussnap_current_plan', JSON.stringify(currentWeeklyPlan));
+                            // 重新渲染看板
+                            renderWeeklyBoard(currentWeeklyPlan);
+                        }
+                    } catch (err) {
+                        alert(`换菜失败: ${err.message}`);
+                        replaceBtn.style.transform = 'rotate(0deg)';
+                        replaceBtn.disabled = false;
+                    }
+                });
+
+                // 2. 点击爱心切换收藏状态
                 const heartBtn = dishCard.querySelector('.fav-heart-btn');
                 heartBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -140,13 +170,13 @@ export function renderWeeklyBoard(planArray) {
                     heartBtn.classList.toggle('active', isNowFav);
                 });
 
-                // 点击卡片打开详情抽屉
+                // 3. 点击卡片打开详情抽屉
                 dishCard.addEventListener('click', () => openRecipeDrawer(dish));
 
                 block.appendChild(dishCard);
-            }
+            });
             col.appendChild(block);
-        }
+        });
         boardContainer.appendChild(col);
-    }
+    });
 }
