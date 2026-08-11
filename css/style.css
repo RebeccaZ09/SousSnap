@@ -182,3 +182,48 @@ body {
     display: inline-block;
     animation: cuteBounce 1.2s ease-in-out infinite;
 }
+
+/* ==========================================
+   1. 日式小清新全局字体与基础设定
+   ========================================== */
+body {
+  /* 使用苹果系统的圆角系统字体配合苹方，在 iPhone 上呈现极致的温润圆润感 */
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Rounded", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  letter-spacing: 0.3px; /* 增加字间距，让界面更有呼吸感 */
+  background-color: var(--bg-color, #FBF9F5);
+  color: var(--text-main, #4A4543);
+}
+
+/* ==========================================
+   2. 治愈系吐司面包加载动画 (Loading State)
+   ========================================== */
+#loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+@keyframes cuteBounce {
+    0%, 100% {
+        transform: translateY(0) scale(1);
+        opacity: 0.85;
+    }
+    50% {
+        transform: translateY(-8px) scale(1.12);
+        opacity: 1;
+    }
+}
+
+.cute-loader {
+    font-size: 32px;
+    display: inline-block;
+    animation: cuteBounce 1.2s ease-in-out infinite;
+}
+
+#loadingText {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary, #8C857E);
+}
