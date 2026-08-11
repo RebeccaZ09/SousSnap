@@ -133,3 +133,19 @@ JSON 格式规范：
 
     return cleanAndParseJSON(candidateText);
 }
+
+// 在你的 api/gemini.js 中增加：
+export async function generateSingleReplacementDish(mealType, excludeName) {
+    const apiKey = getGeminiApiKey(); // 刚才配置的本地获取 key 方法
+    // 构建提示词，让 AI 推荐一道不与 excludeName 重复的新菜，并返回固定 JSON 格式
+    const prompt = `请推荐一道适合${mealType === 'breakfast' ? '早餐' : mealType === 'lunch' ? '午餐' : '晚餐'}的快手菜，名字不能是"${excludeName}"。
+    请严格返回合法的 JSON 格式（不要包含 markdown 代码块包裹）：
+    {
+      "dish_name": "新菜名",
+      "mealType": "${mealType}",
+      "ingredients": ["主料1", "主料2"],
+      "steps": "详细的烹饪步骤说明..."
+    }`;
+
+    // 发起你的 fetch 请求并返回解析后的对象...
+}
