@@ -1,62 +1,68 @@
-/* 7 天 Trello 看板列 (Beta 方案) */
+/* 7 天 Trello 看板列 (日式清新治愈方案) */
 .board-container {
     display: flex;
-    gap: 12px;
+    gap: 14px;
     overflow-x: auto;
     padding-bottom: 12px;
     scroll-snap-type: x mandatory;
     
-    /* 添加以下属性以确保它占满宽度 */
-    width: 100vw;       /* 强制视口宽度 */
-    margin-left: calc(-50vw + 50%); /* 如果该容器被父元素居中，这行可以强制拉伸到屏幕边缘 */
+    width: 100vw;
+    margin-left: calc(-50vw + 50%);
+    padding-left: 16px;
+    padding-right: 16px;
 }
 
 .board-column {
-    min-width: 220px;
-    max-width: 240px;
-    background: rgba(255, 255, 255, 0.7);
-    border: 1px solid var(--card-border);
-    border-radius: var(--radius-md);
-    padding: 12px;
+    min-width: 230px;
+    max-width: 250px;
+    background: #FFFFFF; /* 改为纯白卡片底色 */
+    border: 1px solid var(--border-color, #E8E4DD);
+    border-radius: var(--radius-lg, 16px); /* 更大、更柔和的圆角 */
+    padding: 14px;
     flex-shrink: 0;
     scroll-snap-align: start;
     display: flex;
     flex-direction: column;
     gap: 10px;
+    box-shadow: 0 4px 16px rgba(125, 115, 105, 0.05); /* 温润的暖调散漫阴影 */
 }
 
 .column-header {
     font-size: 14px;
     font-weight: 700;
-    color: var(--secondary);
-    border-bottom: 2px solid var(--primary);
-    padding-bottom: 4px;
+    color: var(--text-main, #4A4543);
+    border-bottom: 2px solid var(--primary-color, #7D8F74); /* 抹茶绿下划线 */
+    padding-bottom: 6px;
     display: flex;
     justify-content: space-between;
 }
 
 .meal-block {
-    background: white;
-    border-radius: var(--radius-sm);
-    padding: 8px 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-    border: 1px solid rgba(0, 0, 0, 0.03);
+    background: var(--surface-muted, #F2EFE9); /* 使用燕麦色次级背景区分用餐时段 */
+    border-radius: var(--radius-md, 12px);
+    padding: 10px 12px;
+    border: none;
 }
 
 .meal-label {
     font-size: 11px;
     font-weight: 600;
-    color: var(--text-sub);
-    margin-bottom: 4px;
+    color: var(--text-secondary, #8C857E);
+    margin-bottom: 6px;
 }
 
 .dish-card-mini {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 0;
+    gap: 10px;
+    padding: 8px 0;
     cursor: pointer;
-    border-bottom: 1px dashed rgba(0,0,0,0.05);
+    border-bottom: 1px dashed rgba(140, 133, 126, 0.15);
+    transition: opacity 0.2s;
+}
+
+.dish-card-mini:active {
+    opacity: 0.7;
 }
 
 .dish-card-mini:last-child {
@@ -64,17 +70,17 @@
 }
 
 .dish-thumb-mini {
-    width: 36px;
-    height: 36px;
-    border-radius: 6px;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
     object-fit: cover;
-    background: #eee;
+    background: #E8E4DD;
 }
 
 .dish-title-mini {
     font-size: 12px;
     font-weight: 600;
-    color: var(--text-main);
+    color: var(--text-main, #4A4543);
 }
 
 /* 菜谱详情 Drawer 抽屉 */
@@ -95,8 +101,8 @@
 .drawer-overlay {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(2px);
+    background: rgba(74, 69, 67, 0.3); /* 暖调半透明遮罩 */
+    backdrop-filter: blur(3px);
     opacity: 0;
     transition: opacity 0.3s ease;
 }
@@ -111,15 +117,16 @@
     width: 100%;
     max-width: 480px;
     margin: 0 auto;
-    height: 80vh;
-    background: white;
-    border-top-left-radius: var(--radius-lg);
-    border-top-right-radius: var(--radius-lg);
+    height: 82vh;
+    background: var(--bg-color, #FBF9F5); /* 抽屉内部使用全局治愈底色 */
+    border-top-left-radius: 24px;
+    border-top-right-radius: 24px;
     display: flex;
     flex-direction: column;
     transform: translateY(100%);
     transition: transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
     overflow: hidden;
+    box-shadow: 0 -10px 30px rgba(125, 115, 105, 0.1);
 }
 
 .drawer.active .drawer-content {
@@ -128,25 +135,28 @@
 
 .drawer-close {
     position: absolute;
-    top: 12px; right: 12px;
+    top: 14px; right: 14px;
     z-index: 10;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(74, 69, 67, 0.6);
     color: white;
     border: none;
-    width: 28px; height: 28px;
+    width: 30px; height: 30px;
     border-radius: 50%;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .drawer-hero-img {
     width: 100%;
-    height: 180px;
+    height: 200px;
     object-fit: cover;
-    background: #eee;
+    background: #E8E4DD;
 }
 
 .drawer-body {
-    padding: 16px;
+    padding: 20px;
     overflow-y: auto;
     flex: 1;
 }
@@ -155,70 +165,77 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
 }
 
 .drawer-title {
     font-size: 18px;
     font-weight: 700;
+    color: var(--text-main, #4A4543);
 }
 
 .badge {
-    font-size: 10px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    background: rgba(255, 107, 74, 0.15);
-    color: var(--primary);
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: rgba(125, 143, 116, 0.12);
+    color: var(--primary-color, #7D8F74);
     font-weight: 600;
 }
 
 .section-subtitle {
     font-size: 13px;
     font-weight: 700;
-    margin-bottom: 6px;
-    color: var(--secondary);
+    margin-bottom: 8px;
+    color: var(--text-main, #4A4543);
 }
 
 .ingredient-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
 }
 
+/* 升级后的精美食材胶囊标签 */
 .ing-tag {
-    font-size: 11px;
-    background: rgba(0, 0, 0, 0.05);
-    padding: 4px 8px;
-    border-radius: 4px;
+    font-size: 12px;
+    background: #FFFFFF;
+    color: var(--text-main, #4A4543);
+    border: 1px solid var(--border-color, #E8E4DD);
+    padding: 5px 12px;
+    border-radius: 16px; /* 温润的小圆角胶囊 */
+    box-shadow: 0 2px 6px rgba(125, 115, 105, 0.04);
 }
 
 .recipe-steps {
-    font-size: 12px;
-    line-height: 1.6;
-    color: #444;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text-main, #4A4543);
     white-space: pre-wrap;
-    background: var(--bg-color);
-    padding: 10px;
-    border-radius: var(--radius-sm);
+    background: #FFFFFF;
+    padding: 14px;
+    border-radius: var(--radius-md, 12px);
+    border: 1px solid var(--border-color, #E8E4DD);
 }
 
 /* “大厨私教” 微调模块 */
 .ai-tutor-box {
     margin-top: 16px;
-    background: rgba(255, 107, 74, 0.06);
-    border: 1px dashed rgba(255, 107, 74, 0.3);
-    border-radius: var(--radius-md);
-    padding: 12px;
+    background: rgba(212, 163, 115, 0.08); /* 暖木色轻量背景 */
+    border: 1px dashed rgba(212, 163, 115, 0.35);
+    border-radius: var(--radius-md, 12px);
+    padding: 14px;
 }
 
 .ai-tutor-title {
     font-size: 13px;
     font-weight: 700;
-    color: var(--primary);
+    color: var(--accent-warm, #D4A373);
 }
 
 .ai-tutor-desc {
-    font-size: 11px;
-    color: var(--text-sub);
-    margin-top: 2px;
+    font-size: 12px;
+    color: var(--text-secondary, #8C857E);
+    margin-top: 4px;
+    line-height: 1.5;
 }
