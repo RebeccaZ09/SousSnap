@@ -75,10 +75,12 @@ export function renderWeeklyBoard(planArray) {
     boardContainer.innerHTML = '';
     const currentMode = localStorage.getItem('soussnap_plan_mode') || 'weekly';
 
-    // 适配单日或周视图的容器样式
+    // 适配单日或周视图的容器样式与全屏类
     if (currentMode === 'daily') {
+        boardContainer.classList.add('daily-full-mode');
         boardContainer.style.gridTemplateColumns = '1fr';
     } else {
+        boardContainer.classList.remove('daily-full-mode');
         boardContainer.style.gridTemplateColumns = '';
     }
 
@@ -103,14 +105,15 @@ export function renderWeeklyBoard(planArray) {
                 const dishCard = document.createElement('div');
                 const hasFav = isFavorite(dish.dish_name);
 
-                // 统一采用清爽的文字行，单日模式下可以稍微宽敞一些
+                // 单日模式下强制宽度 100%，左右撑满；周模式保持紧凑
                 dishCard.className = 'dish-card-item';
                 dishCard.style.cssText = `
                     display: flex; 
                     justify-content: space-between; 
                     align-items: center; 
+                    width: 100%;
                     background: #fff; 
-                    padding: ${currentMode === 'daily' ? '12px 16px' : '10px 8px'}; 
+                    padding: ${currentMode === 'daily' ? '14px 20px' : '10px 8px'}; 
                     margin-bottom: 8px; 
                     border-radius: 8px; 
                     box-shadow: 0 1px 3px rgba(0,0,0,0.02);
@@ -119,11 +122,11 @@ export function renderWeeklyBoard(planArray) {
                 `;
 
                 dishCard.innerHTML = `
-                    <div>
-                        <div style="font-weight: 500; font-size: 15px; color: #333;">${dish.dish_name}</div>
-                        ${currentMode === 'daily' && dish.ingredients ? `<div style="font-size: 12px; color: #888; margin-top: 2px;">主料: ${dish.ingredients.slice(0, 3).join(', ')}</div>` : ''}
+                    <div style="flex: 1; padding-right: 12px;">
+                        <div style="font-weight: 600; font-size: ${currentMode === 'daily' ? '16px' : '15px'}; color: #333;">${dish.dish_name}</div>
+                        ${currentMode === 'daily' && dish.ingredients ? `<div style="font-size: 13px; color: #775555; margin-top: 3px;">主料: ${dish.ingredients.slice(0, 4).join(', ')}</div>` : ''}
                     </div>
-                    <button class="fav-heart-btn ${hasFav ? 'active' : ''}" style="background: none; border: none; cursor: pointer; font-size: 18px; padding: 4px;">
+                    <button class="fav-heart-btn ${hasFav ? 'active' : ''}" style="background: none; border: none; cursor: pointer; font-size: 20px; padding: 6px; flex-shrink: 0;">
                         ${hasFav ? '❤️' : '🤍'}
                     </button>
                 `;
