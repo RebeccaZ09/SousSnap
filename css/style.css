@@ -158,3 +158,22 @@ body {
     justify-content: space-between !important;
     align-items: center !important;
 }
+/* 🌟 针对平板、iPad 或横屏大屏幕的自适应适配 */
+@media (min-width: 768px) {
+    /* 1. 让整体应用容器变宽，充分利用 iPad 的大屏幕空间 */
+    .app-container {
+        max-width: 768px; /* 平板下展开为更宽的页面，也可以设为 90% 或 100% */
+    }
+
+    /* 2. 周菜单在横屏或 iPad 下可以展示得更舒展 */
+    #weeklyBoard {
+        gap: 16px;
+    }
+}
+
+/* 如果是大屏电脑或超宽横屏 */
+@media (min-width: 1024px) {
+    .app-container {
+        max-width: 900px;
+    }
+}
