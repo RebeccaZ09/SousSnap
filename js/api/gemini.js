@@ -162,3 +162,37 @@ export async function generateSingleReplacementDish(mealType, excludeName) {
     const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
     return JSON.parse(cleanText);
 }
+
+export async function scanImageForRecipe(base64Image) {
+    const apiKey = localStorage.getItem('soussnap_gemini_key');
+    if (!apiKey) throw new Error("未找到 API Key");
+
+    const prompt = `请识别这张图片中的食材或小票，并以合法的 JSON 数组格式返回识别到的食材列表（不要包含任何 markdown 代码块标记，如 \`\`\`json）：
+    [
+      { "name": "食材名称1", "category": "vegetable", "expiry": "2026-12-31" }
+    ]`;
+
+    // 示例请求（可根据你项目里现有的其他 API 写法调整）
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            contents: [{
+                parts: [
+                    { text: prompt },
+                    {
+                        inline_data: {
+                            mime_type: "image/jpeg",
+                            data: base64Image
+                        }
+                    }
+                ]
+            }]
+        })
+    });
+
+    const data = await response.json();
+    const text = data.candidates[0].content.parts[0].text;
+    const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(cleanText);
+}
