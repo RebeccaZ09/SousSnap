@@ -27,19 +27,48 @@ function renderPantryList() {
     }
 
     container.innerHTML = pantryItems.map((item, idx) => `
-        <span class="pantry-tag">
+        <span class="pantry-tag" data-index="${idx}" style="cursor: pointer;" title="点击查看/编辑食材详情">
             ${item.name}
-            <button class="remove-tag-btn" data-index="${idx}">&times;</button>
+            <button class="remove-tag-btn" data-index="${idx}" title="删除">&times;</button>
         </span>
     `).join('');
 
+    // 点击食材标签本身（排除删除按钮）打开查看/编辑弹窗
+    container.querySelectorAll('.pantry-tag').forEach(tag => {
+        tag.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-tag-btn')) return;
+            const index = parseInt(tag.dataset.index, 10);
+            openEditModal(index);
+        });
+    });
+
     container.querySelectorAll('.remove-tag-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const index = parseInt(e.target.dataset.index, 10);
+            e.stopPropagation();
+            const index = parseInt(btn.dataset.index, 10);
             pantryItems.splice(index, 1);
             savePantry();
         });
     });
+}
+
+function openEditModal(index) {
+    const item = pantryItems[index];
+    if (!item) return;
+
+    const modal = document.getElementById('editIngredientModal');
+    const idInput = document.getElementById('editIngredientId');
+    const nameInput = document.getElementById('editIngredientName');
+    const categorySelect = document.getElementById('editIngredientCategory');
+    const expiryInput = document.getElementById('editIngredientExpiry');
+
+    if (modal && nameInput) {
+        idInput.value = index;
+        nameInput.value = item.name || '';
+        if (categorySelect) categorySelect.value = item.category || 'vegetable';
+        if (expiryInput) expiryInput.value = item.expiry || '';
+        modal.classList.add('active');
+    }
 }
 
 function setupPantryEvents() {
@@ -48,6 +77,45 @@ function setupPantryEvents() {
     const input = document.getElementById('manualIngredientInput') || document.getElementById('new-ingredient-input');
     const scanBtn = document.getElementById('btnScanImage') || document.getElementById('scan-receipt-btn');
     const fileInput = document.getElementById('imageFileInput') || document.getElementById('receipt-file-input');
+
+    // 编辑/查看模态框相关按钮
+    const editModal = document.getElementById('editIngredientModal');
+    const closeEditBtn = document.getElementById('btnCloseEditIngredient');
+    const saveEditBtn = document.getElementById('btnSaveIngredient');
+    const deleteEditBtn = document.getElementById('btnDeleteIngredient');
+    const idInput = document.getElementById('editIngredientId');
+    const nameInput = document.getElementById('editIngredientName');
+    const categorySelect = document.getElementById('editIngredientCategory');
+    const expiryInput = document.getElementById('editIngredientExpiry');
+
+    if (closeEditBtn && editModal) {
+        closeEditBtn.addEventListener('click', () => editModal.classList.remove('active'));
+    }
+
+    if (saveEditBtn && editModal) {
+        saveEditBtn.addEventListener('click', () => {
+            const index = parseInt(idInput.value, 10);
+            const newName = nameInput.value.trim();
+            if (!isNaN(index) && pantryItems[index] && newName) {
+                pantryItems[index].name = newName;
+                if (categorySelect) pantryItems[index].category = categorySelect.value;
+                if (expiryInput) pantryItems[index].expiry = expiryInput.value;
+                savePantry();
+                editModal.classList.remove('active');
+            }
+        });
+    }
+
+    if (deleteEditBtn && editModal) {
+        deleteEditBtn.addEventListener('click', () => {
+            const index = parseInt(idInput.value, 10);
+            if (!isNaN(index) && pantryItems[index]) {
+                pantryItems.splice(index, 1);
+                savePantry();
+                editModal.classList.remove('active');
+            }
+        });
+    }
 
     if (addBtn && input) {
         const addItem = () => {
@@ -63,7 +131,6 @@ function setupPantryEvents() {
     }
 
     if (scanBtn && fileInput) {
-        // 点击“识别并存入食材库”按钮时，触发隐藏的 file input，手机会自动弹出“拍照”或“从相册选择”选项
         scanBtn.addEventListener('click', () => fileInput.click());
 
         fileInput.addEventListener('change', async (e) => {
@@ -90,7 +157,7 @@ function setupPantryEvents() {
                 alert(`识别失败: ${err.message}`);
             } finally {
                 scanBtn.disabled = false;
-                scanBtn.innerText = '🔍 识别并存入食材库'; // 修正文案
+                scanBtn.innerText = '🔍 识别并存入食材库';
                 fileInput.value = '';
             }
         });
