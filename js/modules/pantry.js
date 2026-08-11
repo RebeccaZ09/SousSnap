@@ -43,10 +43,11 @@ function renderPantryList() {
 }
 
 function setupPantryEvents() {
-    const addBtn = document.getElementById('add-ingredient-btn');
-    const input = document.getElementById('new-ingredient-input');
-    const scanBtn = document.getElementById('scan-receipt-btn');
-    const fileInput = document.getElementById('receipt-file-input');
+    // 对应 index.html 中的 ID
+    const addBtn = document.getElementById('btnAddIngredient');
+    const input = document.getElementById('manualIngredientInput');
+    const scanBtn = document.getElementById('btnScanImage');      // 修正 ID
+    const fileInput = document.getElementById('imageFileInput'); // 修正 ID
 
     if (addBtn && input) {
         const addItem = () => {
@@ -62,6 +63,7 @@ function setupPantryEvents() {
     }
 
     if (scanBtn && fileInput) {
+        // 点击“识别并存入食材库”按钮时，触发隐藏的 file input，手机会自动弹出“拍照”或“从相册选择”选项
         scanBtn.addEventListener('click', () => fileInput.click());
 
         fileInput.addEventListener('change', async (e) => {
@@ -88,7 +90,7 @@ function setupPantryEvents() {
                 alert(`识别失败: ${err.message}`);
             } finally {
                 scanBtn.disabled = false;
-                scanBtn.innerText = '📷 拍小票/食材导入';
+                scanBtn.innerText = '🔍 识别并存入食材库'; // 修正文案
                 fileInput.value = '';
             }
         });
