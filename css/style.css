@@ -126,3 +126,35 @@ body {
 .tab-icon {
     font-size: 20px;
 }
+
+/* 菜单看板基础布局 */
+#weeklyBoard {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr); /* 周菜单多列排布 */
+    gap: 12px;
+    width: 100%;
+}
+
+/* 🌟 单日菜单全屏铺满模式 */
+#weeklyBoard.daily-full-mode {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+}
+
+#weeklyBoard.daily-full-mode .board-column {
+    width: 100% !important;
+    display: flex;
+    flex-direction: column;
+}
+
+#weeklyBoard.daily-full-mode .meal-block {
+    width: 100% !important;
+}
+
+#weeklyBoard.daily-full-mode .dish-card-item {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+}
