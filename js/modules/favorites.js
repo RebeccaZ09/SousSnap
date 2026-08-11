@@ -31,7 +31,7 @@ export function toggleFavorite(dish) {
 
 // 渲染“必吃金榜”Tab 页面的菜品列表
 export function renderFavoritesUI() {
-    const container = document.getElementById('favorites-grid');
+    const container = document.getElementById('favoriteList');
     if (!container) return;
 
     const list = getFavoritesList();
