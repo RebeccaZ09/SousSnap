@@ -143,19 +143,25 @@ export function renderWeeklyBoard(planArray) {
                     e.stopPropagation();
                     replaceBtn.style.transform = 'rotate(180deg)';
                     replaceBtn.disabled = true;
-
+                
                     try {
-                        const newDish = await generateSingleReplacementDish(type.key, dish.dish_name);
+                        let newDish;
+                        // 检查函数是否存在，防止未定义导致报错
+                        if (typeof generateSingleReplacementDish === 'function') {
+                            newDish = await generateSingleReplacementDish(type.key, dish.dish_name);
+                        } else {
+                            throw new Error("换菜接口未定义");
+                        }
+                
                         if (newDish && newDish.dish_name) {
-                            // 更新内存中的对应数据
                             currentWeeklyPlan[dayIndex][type.key][dishIndex] = newDish;
-                            // 同步回 localStorage
                             localStorage.setItem('soussnap_current_plan', JSON.stringify(currentWeeklyPlan));
-                            // 重新渲染看板
                             renderWeeklyBoard(currentWeeklyPlan);
                         }
                     } catch (err) {
+                        console.error("换菜出错:", err);
                         alert(`换菜失败: ${err.message}`);
+                    } finally {
                         replaceBtn.style.transform = 'rotate(0deg)';
                         replaceBtn.disabled = false;
                     }
