@@ -44,7 +44,7 @@
             </div>
         </section>
 
-        <!-- TAB 2: 食材库 / 拍照识别 -->
+        <!-- TAB 2: 食材库 / 拍照识别 (已移入智能补货清单) -->
         <section id="tab-pantry" class="tab-content hidden">
             <div class="card">
                 <div class="card-title">📷 拍照/小票存入食材库</div>
@@ -68,22 +68,23 @@
                     <input type="text" id="manualIngredientInput" class="input-field" placeholder="手动添加食材...">
                     <button class="btn-primary-sm" id="btnAddIngredient">添加</button>
                 </div>
-                <!-- 需求 6：食材库卡片展示与交互区域 -->
+                <!-- 食材库卡片展示与交互区域 -->
                 <div id="pantryList" class="pantry-list"></div>
             </div>
-        </section>
 
-        <!-- TAB 3: 必吃金榜 (原收藏/清单) -->
-        <section id="tab-favorites" class="tab-content hidden">
-            <div class="card">
-                <div class="card-title">❤️ 必吃金榜</div>
-                <div id="favoriteList"></div>
-            </div>
-
+            <!-- 🌟 智能补货清单推荐已移至此处 -->
             <div class="card">
                 <div class="card-title">🛒 智能补货清单推荐</div>
                 <button class="btn-secondary" id="btnGenerateShopping">生成周度补货清单</button>
                 <div id="shoppingListContainer" style="margin-top: 10px;"></div>
+            </div>
+        </section>
+
+        <!-- TAB 3: 我的最爱 (原必吃金榜) -->
+        <section id="tab-favorites" class="tab-content hidden">
+            <div class="card">
+                <div class="card-title">❤️ 我的最爱</div>
+                <div id="favoriteList"></div>
             </div>
         </section>
     </main>
@@ -100,7 +101,7 @@
         </button>
         <button class="tab-item" data-tab="favorites">
             <span class="tab-icon">🏆</span>
-            <span>必吃金榜</span>
+            <span>我的最爱</span>
         </button>
     </nav>
 </div>
@@ -128,7 +129,7 @@
             <div class="section-subtitle" style="margin-top: 16px;">🍳 烹饪步骤</div>
             <div id="drawerSteps" class="recipe-steps"></div>
 
-            <!-- 第7项需求：降级后的“大厨私教”微调模块 -->
+            <!-- 大厨私教微调模块 -->
             <div class="ai-tutor-box">
                 <div class="ai-tutor-title">🧑‍🍳 大厨私教</div>
                 <div class="ai-tutor-desc">微调小助手：“这道菜想换个做法” / “换个不辣的”…</div>
@@ -141,7 +142,7 @@
     </div>
 </div>
 
-<!-- 需求 6 增加：编辑/查看食材详情模态框 (Edit Ingredient Modal) -->
+<!-- 编辑/查看食材详情模态框 -->
 <div id="editIngredientModal" class="modal">
     <div class="modal-body">
         <div class="modal-header">
@@ -194,7 +195,7 @@
                 <input type="password" id="apiKeyInput" class="input-field" placeholder="AIzaSy... 或 AQ...">
             </div>
 
-            <!-- Google Image Search API (Option A 配图) -->
+            <!-- Google Image Search API -->
             <div class="setting-group">
                 <label class="setting-label">Google Image Search API Key (可选)</label>
                 <input type="password" id="googleApiKeyInput" class="input-field" placeholder="Google API Key">
@@ -282,7 +283,7 @@
     </div>
 </div>
 
-<!-- 拆分后的 JS 模块入口 (ES Modules) -->
+<!-- 拆分后的 JS 模块入口 -->
 <script type="module" src="js/main.js"></script>
 </body>
 </html>
