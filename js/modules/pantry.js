@@ -18,7 +18,7 @@ function savePantry() {
 }
 
 function renderPantryList() {
-    const container = document.getElementById('pantry-tags-container');
+    const container = document.getElementById('pantryList') || document.getElementById('pantry-tags-container');
     if (!container) return;
 
     if (pantryItems.length === 0) {
@@ -44,10 +44,10 @@ function renderPantryList() {
 
 function setupPantryEvents() {
     // 对应 index.html 中的 ID
-    const addBtn = document.getElementById('btnAddIngredient');
-    const input = document.getElementById('manualIngredientInput');
-    const scanBtn = document.getElementById('btnScanImage');      // 修正 ID
-    const fileInput = document.getElementById('imageFileInput'); // 修正 ID
+    const addBtn = document.getElementById('btnAddIngredient') || document.getElementById('add-ingredient-btn');
+    const input = document.getElementById('manualIngredientInput') || document.getElementById('new-ingredient-input');
+    const scanBtn = document.getElementById('btnScanImage') || document.getElementById('scan-receipt-btn');
+    const fileInput = document.getElementById('imageFileInput') || document.getElementById('receipt-file-input');
 
     if (addBtn && input) {
         const addItem = () => {
