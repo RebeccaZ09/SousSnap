@@ -164,3 +164,21 @@ body {
 @media (min-width: 1024px) {
     .app-container { max-width: 900px; }
 }
+
+/* 可爱的小图标跳动/呼吸动画 */
+@keyframes cuteBounce {
+    0%, 100% {
+        transform: translateY(0) scale(1);
+        opacity: 0.8;
+    }
+    50% {
+        transform: translateY(-6px) scale(1.1);
+        opacity: 1;
+    }
+}
+
+.cute-loader {
+    font-size: 28px;
+    display: inline-block;
+    animation: cuteBounce 1.2s ease-in-out infinite;
+}
