@@ -134,12 +134,14 @@ JSON 格式规范：
     return cleanAndParseJSON(candidateText);
 }
 
-// 在你的 api/gemini.js 中增加：
+// 在 api/gemini.js 中确保加上并 export 这个方法：
 export async function generateSingleReplacementDish(mealType, excludeName) {
-    const apiKey = getGeminiApiKey(); // 刚才配置的本地获取 key 方法
-    // 构建提示词，让 AI 推荐一道不与 excludeName 重复的新菜，并返回固定 JSON 格式
-    const prompt = `请推荐一道适合${mealType === 'breakfast' ? '早餐' : mealType === 'lunch' ? '午餐' : '晚餐'}的快手菜，名字不能是"${excludeName}"。
-    请严格返回合法的 JSON 格式（不要包含 markdown 代码块包裹）：
+    const apiKey = localStorage.getItem('soussnap_gemini_key');
+    if (!apiKey) throw new Error("未找到 API Key");
+
+    const mealLabel = mealType === 'breakfast' ? '早餐' : mealType === 'lunch' ? '午餐' : '晚餐';
+    const prompt = `请推荐一道适合${mealLabel}的快手菜，菜名绝对不能是"${excludeName}"。
+    请严格返回合法的 JSON 格式（不要包含任何 markdown 代码块标记，如 \`\`\`json）：
     {
       "dish_name": "新菜名",
       "mealType": "${mealType}",
@@ -147,5 +149,16 @@ export async function generateSingleReplacementDish(mealType, excludeName) {
       "steps": "详细的烹饪步骤说明..."
     }`;
 
-    // 发起你的 fetch 请求并返回解析后的对象...
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }]
+        })
+    });
+
+    const data = await response.json();
+    const text = data.candidates[0].content.parts[0].text;
+    const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(cleanText);
 }
