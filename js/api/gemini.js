@@ -196,3 +196,40 @@ export async function scanImageForRecipe(base64Image) {
     const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
     return JSON.parse(cleanText);
 }
+
+// 3. 换单道菜
+export async function generateSingleReplacementDish(mealType, excludeName) {
+    const config = getAppConfig();
+    if (!config.geminiApiKey) {
+        throw new Error('请先设置 Gemini API Key！');
+    }
+
+    const mealLabel = mealType === 'breakfast' ? '早餐' : mealType === 'lunch' ? '午餐' : '晚餐';
+    const prompt = `请推荐一道适合${mealLabel}的美味菜品，菜名绝对不能是 "${excludeName}"。
+请严格返回合法的 JSON 格式（不要包含任何 markdown 代码块标记）：
+{
+  "dish_name": "新菜名",
+  "mealType": "${mealType}",
+  "ingredients": ["主料1", "主料2"],
+  "steps": "详细的烹饪步骤说明..."
+}`;
+
+    const response = await fetch(`${GEMINI_BASE_URL}/${GEMINI_MODEL}:generateContent?key=${config.geminiApiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+                responseMimeType: "application/json"
+            }
+        })
+    });
+
+    const data = await response.json();
+    if (data.error) throw new Error(`[Gemini API Error]: ${data.error.message}`);
+    
+    const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!candidateText) throw new Error('Gemini 未返回有效内容');
+
+    return cleanAndParseJSON(candidateText);
+}
