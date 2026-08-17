@@ -18,6 +18,24 @@ function savePantry() {
     renderPantryList();
 }
 
+// 计算默认保质期（7天后）
+function getDefaultExpiryDate() {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    return d.toISOString().split('T')[0];
+}
+
+// 智能关键词分类匹配器
+function autoCategorize(name) {
+    const lowerName = name.toLowerCase();
+    if (/(肉|鸡|鸭|鱼|虾|牛肉|猪肉|海鲜|排骨|羊|牛排|五花肉)/.test(lowerName)) return 'meat';
+    if (/(菜|果|蔬|叶|草|瓜|豆|菇|葱|蒜|姜|萝卜|芹|西红柿|土豆|黄瓜)/.test(lowerName)) return 'vegetable';
+    if (/(蛋|奶|芝士|奶酪|酸奶|黄油|奶油|牛奶)/.test(lowerName)) return 'dairy';
+    if (/(米|面|粉|油|酱|盐|糖|醋|蚝油|调料|料酒|生抽|老抽|胡椒)/.test(lowerName)) return 'condiment';
+    if (/(干货|木耳|香菇|豆皮|粉丝|木耳)/.test(lowerName)) return 'pantry';
+    return 'other';
+}
+
 // 分类中文与图标映射
 const CATEGORY_MAP = {
     vegetable: { label: '蔬菜果蔬', icon: '🥦', color: '#e6f4ea', textCol: '#137333' },
@@ -32,7 +50,7 @@ function renderPantryList() {
     const container = document.getElementById('pantryList') || document.getElementById('pantry-tags-container');
     if (!container) return;
 
-    // 1. 如果没有容器包裹筛选栏，可以自动注入一个干净的筛选头部（如果已有可忽略）
+    // 1. 如果没有容器包裹筛选栏，可以自动注入一个干净的筛选头部
     if (!document.getElementById('pantryFilterBar')) {
         const parent = container.parentElement;
         if (parent && !document.getElementById('pantryFilterBar')) {
@@ -101,11 +119,9 @@ function renderPantryList() {
     `;
 
     container.innerHTML = filteredItems.map((item) => {
-        // 查找原始索引以便于编辑和删除
         const realIdx = pantryItems.indexOf(item);
         const catInfo = CATEGORY_MAP[item.category] || CATEGORY_MAP.other;
         
-        // 计算保质期状态
         let expiryHtml = '';
         if (item.expiry) {
             const today = new Date().toISOString().split('T')[0];
@@ -141,7 +157,7 @@ function renderPantryList() {
                     <div style="font-weight: 600; font-size: 15px; color: #202124; margin-bottom: 4px; word-break: break-all;">${item.name}</div>
                 </div>
 
-                <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 8px; border-top: 1px solid #f1f3f4; pt: 8px;">
+                <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 8px; border-top: 1px solid #f1f3f4; padding-top: 8px;">
                     <span style="align-self: flex-start; font-size: 11px; background: ${catInfo.color}; color: ${catInfo.textCol}; padding: 2px 6px; border-radius: 4px; font-weight: 500;">
                         ${catInfo.label}
                     </span>
@@ -151,7 +167,6 @@ function renderPantryList() {
         `;
     }).join('');
 
-    // 绑定点击卡片打开编辑模态框
     container.querySelectorAll('.pantry-card-item').forEach(card => {
         card.addEventListener('click', (e) => {
             if (e.target.classList.contains('remove-tag-btn')) return;
@@ -160,7 +175,6 @@ function renderPantryList() {
         });
     });
 
-    // 绑定删除按钮
     container.querySelectorAll('.remove-tag-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -240,7 +254,8 @@ function setupPantryEvents() {
             if (val) {
                 pantryItems.push({ 
                     name: val, 
-                    category: 'vegetable', // 默认归为蔬菜/果蔬
+                    category: autoCategorize(val), // 自动匹配分类
+                    expiry: getDefaultExpiryDate(),    // 默认7天保质期
                     addedAt: new Date().toISOString() 
                 });
                 input.value = '';
@@ -266,16 +281,18 @@ function setupPantryEvents() {
                 const result = await scanImageForIngredients(base64);
 
                 if (result && Array.isArray(result.items)) {
-                    result.items.render?.(); // safety
                     result.items.forEach(item => {
-                        // 兼容 AI 返回的是字符串或者是带分类的对象
                         const itemName = typeof item === 'string' ? item : item.name;
-                        const itemCat = typeof item === 'object' && item.category ? item.category : 'vegetable';
+                        // 优先采用 AI 返回的分类，若无则使用自动关键词分类
+                        const itemCat = (typeof item === 'object' && item.category) 
+                                        ? item.category 
+                                        : autoCategorize(itemName);
                         
                         if (itemName && !pantryItems.some(p => p.name === itemName)) {
                             pantryItems.push({ 
                                 name: itemName, 
                                 category: itemCat, 
+                                expiry: getDefaultExpiryDate(), 
                                 addedAt: new Date().toISOString() 
                             });
                         }
