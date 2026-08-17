@@ -1,6 +1,5 @@
 // js/modules/favorites.js
 import { openRecipeDrawer } from './recipeDrawer.js';
-import { scanImageForRecipe } from '../api/gemini.js';
 
 const FAVORITES_KEY = 'soussnap_favorites';
 
@@ -39,13 +38,12 @@ export function renderFavoritesUI() {
 
     const list = getFavoritesList();
     
-    // 顶部操作栏
+    // 顶部操作栏 (去掉了拍照，只保留手动输入按钮)
     let topActionHtml = `
-        <div style="margin-bottom: 16px; display: flex; gap: 8px;">
+        <div style="margin-bottom: 16px; display: flex;">
             <button id="btnAddFavorite" class="btn-primary" style="flex: 1; font-size: 13px; padding: 10px; border-radius: var(--radius-md, 12px); background: var(--primary-color, #7D8F74); color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                <span>❤️ 手动输入或拍照加入最爱</span>
+                <span>➕ 手动输入菜名加入最爱</span>
             </button>
-            <input type="file" id="favImageInput" accept="image/*" capture="environment" style="display: none;">
         </div>
     `;
 
@@ -92,21 +90,22 @@ export function renderFavoritesUI() {
 
         dishes.forEach(dish => {
             let label = '其他';
-            let emoji = '🍽️';
             const rawMeal = dish.mealType || '';
             
-            if (rawMeal.includes('早') || rawMeal === 'breakfast') {
-                label = '早餐'; emoji = '🍳';
-            } else if (rawMeal.includes('午') || rawMeal === 'lunch') {
-                label = '午餐'; emoji = '🍱';
-            } else if (rawMeal.includes('晚') || rawMeal === 'dinner') {
-                label = '晚餐'; emoji = '🍲';
-            }
+            if (rawMeal.includes('早') || rawMeal === 'breakfast') label = '早餐';
+            else if (rawMeal.includes('午') || rawMeal === 'lunch') label = '午餐';
+            else if (rawMeal.includes('晚') || rawMeal === 'dinner') label = '晚餐';
 
+            // 把之前的 span 改成了 select 下拉菜单
             html += `
                 <div class="favorite-item-row" data-name="${dish.dish_name}" style="display: flex; justify-content: space-between; align-items: center; background: #FFFFFF; padding: 12px 16px; border-radius: var(--radius-md, 12px); cursor: pointer; border: 1px solid var(--border-color, #E8E4DD); box-shadow: 0 2px 8px rgba(125, 115, 105, 0.03); transition: all 0.2s;">
                     <div style="display: flex; align-items: center; gap: 8px; flex: 1; padding-right: 8px;">
-                        <span style="font-size: 11px; background: #F5F3F0; padding: 2px 6px; border-radius: 6px; color: var(--text-secondary, #8C857E); white-space: nowrap;">${emoji} ${label}</span>
+                        <select class="meal-type-select" data-name="${dish.dish_name}" style="font-size: 12px; background: #F5F3F0; padding: 4px 6px; border-radius: 6px; color: var(--text-secondary, #8C857E); border: 1px solid #E8E4DD; outline: none; cursor: pointer;">
+                            <option value="早餐" ${label === '早餐' ? 'selected' : ''}>🍳 早餐</option>
+                            <option value="午餐" ${label === '午餐' ? 'selected' : ''}>🍱 午餐</option>
+                            <option value="晚餐" ${label === '晚餐' ? 'selected' : ''}>🍲 晚餐</option>
+                            <option value="其他" ${label === '其他' ? 'selected' : ''}>🍽️ 其他</option>
+                        </select>
                         <span style="font-size: 14px; font-weight: 500; color: var(--text-main, #4A4543);">${dish.dish_name}</span>
                     </div>
                     <button class="remove-fav-inline" data-name="${dish.dish_name}" style="background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px;" title="移出最爱">🗑️</button>
@@ -126,94 +125,50 @@ function setupFavoritesEvents() {
     if (!container) return;
 
     const addBtn = document.getElementById('btnAddFavorite');
-    const fileInput = document.getElementById('favImageInput');
 
-    // 1. 绑定添加按钮点击事件
-    if (addBtn && fileInput && !addBtn.dataset.bound) {
+    // 1. 绑定添加按钮点击事件 (仅支持手动输入)
+    if (addBtn && !addBtn.dataset.bound) {
         addBtn.dataset.bound = "true";
         addBtn.addEventListener('click', () => {
-            const choice = prompt("请选择添加方式：\n1. 输入“1”：手动输入菜名\n2. 输入“2”：拍照或上传菜谱图片识别");
-            
-            if (choice === '1') {
-                const dishName = prompt("请输入你想加入最爱的菜名：");
-                if (dishName && dishName.trim()) {
-                    // 让用户选择餐次
-                    const mealChoice = prompt("请选择这道菜属于哪一餐：\n1. 早餐\n2. 午餐\n3. 晚餐\n(直接输入数字或名称，默认晚餐)");
-                    let mealType = '晚餐';
-                    if (mealChoice === '1' || mealChoice?.includes('早')) mealType = '早餐';
-                    else if (mealChoice === '2' || mealChoice?.includes('午')) mealType = '午餐';
-                    else if (mealChoice === '3' || mealChoice?.includes('晚')) mealType = '晚餐';
-
-                    const newDish = {
-                        dish_name: dishName.trim(),
-                        mealType: mealType,
-                        ingredients: [],
-                        steps: '手动添加的菜品，暂无详细步骤。',
-                        addedAt: new Date().toISOString()
-                    };
-                    let list = getFavoritesList();
-                    if (!list.some(d => d.dish_name === newDish.dish_name)) {
-                        list.push(newDish);
-                        localStorage.setItem(FAVORITES_KEY, JSON.stringify(list));
-                        renderFavoritesUI();
-                    } else {
-                        alert('这道菜已经在你的最爱里啦！');
-                    }
+            const dishName = prompt("请输入你想加入最爱的菜名：");
+            if (dishName && dishName.trim()) {
+                const newDish = {
+                    dish_name: dishName.trim(),
+                    mealType: '其他', // 添加时默认放到“其他”，用户可以用左侧下拉菜单快速修改
+                    ingredients: [],
+                    steps: '手动添加的菜品，暂无详细步骤。',
+                    addedAt: new Date().toISOString()
+                };
+                let list = getFavoritesList();
+                if (!list.some(d => d.dish_name === newDish.dish_name)) {
+                    list.push(newDish);
+                    localStorage.setItem(FAVORITES_KEY, JSON.stringify(list));
+                    renderFavoritesUI();
+                } else {
+                    alert('这道菜已经在你的最爱里啦！');
                 }
-            } else if (choice === '2') {
-                fileInput.click();
-            }
-        });
-
-        // 2. 绑定拍照/传图识别事件
-        fileInput.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            addBtn.disabled = true;
-            addBtn.innerHTML = '<span>✨ 正在解读菜谱中...</span>';
-
-            try {
-                const base64 = await fileToBase64(file);
-                const result = await scanImageForRecipe(base64); 
-
-                if (result && (result.dish_name || result.name)) {
-                    const dishName = result.dish_name || result.name;
-                    
-                    // 允许用户在识别后调整餐次
-                    const mealChoice = prompt(`识别成功："${dishName}"\n请选择这道菜属于哪一餐：\n1. 早餐\n2. 午餐\n3. 晚餐`, "3");
-                    let mealType = result.mealType || '晚餐';
-                    if (mealChoice === '1' || mealChoice?.includes('早')) mealType = '早餐';
-                    else if (mealChoice === '2' || mealChoice?.includes('午')) mealType = '午餐';
-                    else if (mealChoice === '3' || mealChoice?.includes('晚')) mealType = '晚餐';
-
-                    const newDish = {
-                        dish_name: dishName,
-                        mealType: mealType,
-                        ingredients: result.ingredients || [],
-                        steps: result.steps || '通过图片识别添加。',
-                        addedAt: new Date().toISOString()
-                    };
-
-                    let list = getFavoritesList();
-                    if (!list.some(d => d.dish_name === dishName)) {
-                        list.push(newDish);
-                        localStorage.setItem(FAVORITES_KEY, JSON.stringify(list));
-                        renderFavoritesUI();
-                        alert(`成功将 "${dishName}" 加入最爱！`);
-                    } else {
-                        alert('这道菜已经在你的最爱里啦！');
-                    }
-                }
-            } catch (err) {
-                alert(`识别失败: ${err.message}`);
-            } finally {
-                addBtn.disabled = false;
-                addBtn.innerHTML = '<span>❤️ 手动输入或拍照加入最爱</span>';
-                fileInput.value = '';
             }
         });
     }
+
+    // 2. 绑定下拉菜单切换事件 (修改老菜品的餐次)
+    container.querySelectorAll('.meal-type-select').forEach(select => {
+        if (select.dataset.bound) return;
+        select.dataset.bound = "true";
+
+        select.addEventListener('change', (e) => {
+            const name = e.target.dataset.name;
+            const newMealType = e.target.value;
+            let list = getFavoritesList();
+            const dishIndex = list.findIndex(d => d.dish_name === name);
+            
+            if (dishIndex !== -1) {
+                list[dishIndex].mealType = newMealType;
+                localStorage.setItem(FAVORITES_KEY, JSON.stringify(list));
+                renderFavoritesUI(); // 重新渲染，菜品会自动移动到新分类下
+            }
+        });
+    });
 
     // 3. 绑定点击整行打开抽屉事件
     container.querySelectorAll('.favorite-item-row').forEach(row => {
@@ -221,7 +176,10 @@ function setupFavoritesEvents() {
         row.dataset.bound = "true";
 
         row.addEventListener('click', (e) => {
+            // 防止点击下拉菜单或删除按钮时触发打开菜谱抽屉
             if (e.target.classList.contains('remove-fav-inline')) return;
+            if (e.target.tagName.toLowerCase() === 'select' || e.target.tagName.toLowerCase() === 'option') return;
+            
             const name = row.dataset.name;
             const list = getFavoritesList();
             const dish = list.find(d => d.dish_name === name);
@@ -241,14 +199,5 @@ function setupFavoritesEvents() {
             const dish = list.find(d => d.dish_name === name);
             if (dish) toggleFavorite(dish);
         });
-    });
-}
-
-function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result.split(',')[1]);
-        reader.onerror = error => reject(error);
     });
 }
