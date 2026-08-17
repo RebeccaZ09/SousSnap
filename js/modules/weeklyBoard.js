@@ -75,11 +75,19 @@ export function renderWeeklyBoard(planArray) {
     boardContainer.innerHTML = '';
     const currentMode = localStorage.getItem('soussnap_plan_mode') || 'weekly';
 
+    // 强力保证全屏铺满样式
+    boardContainer.style.width = '100%';
+    boardContainer.style.maxWidth = '100%';
+    boardContainer.style.boxSizing = 'border-box';
+
     if (currentMode === 'daily') {
         boardContainer.classList.add('daily-full-mode');
-        boardContainer.style.gridTemplateColumns = '1fr';
+        boardContainer.style.display = 'flex';
+        boardContainer.style.flexDirection = 'column';
+        boardContainer.style.gap = '12px';
     } else {
         boardContainer.classList.remove('daily-full-mode');
+        boardContainer.style.display = '';
         boardContainer.style.gridTemplateColumns = '';
     }
 
@@ -87,6 +95,13 @@ export function renderWeeklyBoard(planArray) {
     planArray.forEach((dayData, dayIndex) => {
         const col = document.createElement('div');
         col.className = 'board-column';
+        
+        // 如果是今日模式，让列也百分之百撑开
+        if (currentMode === 'daily') {
+            col.style.width = '100%';
+            col.style.maxWidth = '100%';
+        }
+
         col.innerHTML = `<div class="column-header"><span>${dayData.day}</span></div>`;
 
         const mealTypes = [
@@ -125,7 +140,7 @@ export function renderWeeklyBoard(planArray) {
                         <div style="font-weight: 600; font-size: ${currentMode === 'daily' ? '16px' : '15px'}; color: var(--text-main, #333);">${dish.dish_name}</div>
                         ${currentMode === 'daily' && dish.ingredients ? `<div style="font-size: 13px; color: var(--text-secondary, #775555); margin-top: 3px;">主料: ${dish.ingredients.slice(0, 4).join(', ')}</div>` : ''}
                     </div>
-                    <div style="display: flex; align-items: center; gap: 2px; flex-shrink: 0;">
+                    <div style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
                         <!-- 换菜按钮 -->
                         <button class="replace-dish-btn" title="换个新菜" style="background: none; border: none; cursor: pointer; font-size: 16px; padding: 6px; transition: transform 0.3s;">
                             🔄
@@ -146,7 +161,6 @@ export function renderWeeklyBoard(planArray) {
                 
                     try {
                         let newDish;
-                        // 检查函数是否存在，防止未定义导致报错
                         if (typeof generateSingleReplacementDish === 'function') {
                             newDish = await generateSingleReplacementDish(type.key, dish.dish_name);
                         } else {
@@ -154,6 +168,8 @@ export function renderWeeklyBoard(planArray) {
                         }
                 
                         if (newDish && newDish.dish_name) {
+                            // 保持原本的 mealType 映射
+                            newDish.mealType = type.label.replace(/[^早午晚]/g, '') + '餐';
                             currentWeeklyPlan[dayIndex][type.key][dishIndex] = newDish;
                             localStorage.setItem('soussnap_current_plan', JSON.stringify(currentWeeklyPlan));
                             renderWeeklyBoard(currentWeeklyPlan);
@@ -171,7 +187,12 @@ export function renderWeeklyBoard(planArray) {
                 const heartBtn = dishCard.querySelector('.fav-heart-btn');
                 heartBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const isNowFav = toggleFavorite(dish);
+                    // 确保收藏时带上 mealType 传过去，方便在最爱页面归类
+                    const dishToToggle = {
+                        ...dish,
+                        mealType: type.label.replace(/[^早午晚]/g, '') + '餐'
+                    };
+                    const isNowFav = toggleFavorite(dishToToggle);
                     heartBtn.innerHTML = isNowFav ? '❤️' : '🤍';
                     heartBtn.classList.toggle('active', isNowFav);
                 });
