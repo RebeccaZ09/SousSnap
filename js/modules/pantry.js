@@ -32,7 +32,7 @@ function autoCategorize(name) {
     if (/(菜|果|蔬|叶|草|瓜|豆|菇|葱|蒜|姜|萝卜|芹|西红柿|土豆|黄瓜)/.test(lowerName)) return 'vegetable';
     if (/(蛋|奶|芝士|奶酪|酸奶|黄油|奶油|牛奶)/.test(lowerName)) return 'dairy';
     if (/(米|面|粉|油|酱|盐|糖|醋|蚝油|调料|料酒|生抽|老抽|胡椒)/.test(lowerName)) return 'condiment';
-    if (/(干货|木耳|香菇|豆皮|粉丝|木耳)/.test(lowerName)) return 'pantry';
+    if (/(干货|木耳|香菇|豆皮|粉丝)/.test(lowerName)) return 'pantry';
     return 'other';
 }
 
@@ -148,19 +148,22 @@ function renderPantryList() {
             " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.02)'">
                 
                 <div>
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
-                        <span style="font-size: 18px;" title="${catInfo.label}">${catInfo.icon}</span>
-                        <button class="remove-tag-btn" data-index="${realIdx}" title="删除食材" style="
-                            background: none; border: none; cursor: pointer; color: #999; font-size: 16px; padding: 0 4px; border-radius: 4px;
-                        " onmouseover="this.style.color='#d93025'" onmouseout="this.style.color='#999'">&times;</button>
+                    <!-- 第一行：名称在左，分类标签与删除按钮靠右对齐 -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; gap: 6px;">
+                        <div style="font-weight: 600; font-size: 15px; color: #202124; word-break: break-all; flex: 1;">${item.name}</div>
+                        <div style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
+                            <span style="font-size: 11px; background: ${catInfo.color}; color: ${catInfo.textCol}; padding: 2px 6px; border-radius: 4px; font-weight: 500;">
+                                ${catInfo.label}
+                            </span>
+                            <button class="remove-tag-btn" data-index="${realIdx}" title="删除食材" style="
+                                background: none; border: none; cursor: pointer; color: #999; font-size: 16px; padding: 0 4px; border-radius: 4px;
+                            " onmouseover="this.style.color='#d93025'" onmouseout="this.style.color='#999'">&times;</button>
+                        </div>
                     </div>
-                    <div style="font-weight: 600; font-size: 15px; color: #202124; margin-bottom: 4px; word-break: break-all;">${item.name}</div>
                 </div>
 
+                <!-- 底部：只保留保质期 -->
                 <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 8px; border-top: 1px solid #f1f3f4; padding-top: 8px;">
-                    <span style="align-self: flex-start; font-size: 11px; background: ${catInfo.color}; color: ${catInfo.textCol}; padding: 2px 6px; border-radius: 4px; font-weight: 500;">
-                        ${catInfo.label}
-                    </span>
                     ${expiryHtml}
                 </div>
             </div>
