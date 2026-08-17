@@ -1,206 +1,309 @@
-// js/api/gemini.js
-import { getAppConfig, getUserPreferences } from '../config.js';
-import { getFavoritesList } from '../modules/favorites.js';
+// js/modules/pantry.js
+import { scanImageForIngredients } from '../api/gemini.js';
 
-export const GEMINI_MODEL = 'gemini-3.6-flash';
-const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+let pantryItems = JSON.parse(localStorage.getItem('soussnap_pantry') || '[]');
+let currentFilterCategory = 'all';
 
-function cleanAndParseJSON(text) {
-    let cleanText = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-    return JSON.parse(cleanText);
+export function initPantryModule() {
+    renderPantryList();
+    setupPantryEvents();
 }
 
-// 1. 生成单日三餐
-export async function generateDailyPlanner(pantryList = []) {
-    return fetchPlanFromGemini(pantryList, 'daily');
+export function getPantryList() {
+    return pantryItems;
 }
 
-// 2. 生成一周三餐
-export async function generateWeeklyPlanner(pantryList = []) {
-    return fetchPlanFromGemini(pantryList, 'weekly');
+function savePantry() {
+    localStorage.setItem('soussnap_pantry', JSON.stringify(pantryItems));
+    renderPantryList();
 }
 
-// js/api/gemini.js
-export async function scanImageForIngredients(base64Image, apiKey) {
-    if (!apiKey) {
-        throw new Error('API Key is required');
+// 分类中文映射（名字更直观）
+const CATEGORY_MAP = {
+    vegetable: { label: '蔬菜果蔬', color: '#e6f4ea', textCol: '#137333' },
+    meat: { label: '肉类海鲜', color: '#fce8e6', textCol: '#c5221f' },
+    dairy: { label: '蛋奶烘焙', color: '#fef7e0', textCol: '#b06000' },
+    pantry: { label: '粮油干货', color: '#f1f3f4', textCol: '#3c4043' },
+    condiment: { label: '调味酱料', color: '#e8f0fe', textCol: '#1967d2' },
+    other: { label: '其他食材', color: '#f3e8fd', textCol: '#8430ce' }
+};
+
+// 获取从今天起往后一周的日期格式 (YYYY-MM-DD)
+function getDefaultExpiryDate() {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    return d.toISOString().split('T')[0];
+}
+
+function renderPantryList() {
+    const container = document.getElementById('pantryList') || document.getElementById('pantry-tags-container');
+    if (!container) return;
+
+    // 1. 注入顶部筛选栏
+    if (!document.getElementById('pantryFilterBar')) {
+        const parent = container.parentElement;
+        if (parent && !document.getElementById('pantryFilterBar')) {
+            const filterBar = document.createElement('div');
+            filterBar.id = 'pantryFilterBar';
+            filterBar.style.cssText = 'display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;';
+            filterBar.innerHTML = `
+                <button class="filter-pill active" data-cat="all" style="padding: 6px 14px; border-radius: 20px; border: 1px solid #ddd; background: #333; color: #fff; cursor: pointer; font-size: 13px; transition: all 0.2s;">全部 (${pantryItems.length})</button>
+                ${Object.keys(CATEGORY_MAP).map(key => `
+                    <button class="filter-pill" data-cat="${key}" style="padding: 6px 14px; border-radius: 20px; border: 1px solid #ddd; background: #f8f9fa; color: #555; cursor: pointer; font-size: 13px; transition: all 0.2s;">
+                        ${CATEGORY_MAP[key].label}
+                    </button>
+                `).join('')}
+            `;
+            parent.insertBefore(filterBar, container);
+
+            filterBar.querySelectorAll('.filter-pill').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    filterBar.querySelectorAll('.filter-pill').forEach(b => {
+                        b.classList.remove('active');
+                        b.style.background = '#f8f9fa';
+                        b.style.color = '#555';
+                        b.style.borderColor = '#ddd';
+                    });
+                    btn.classList.add('active');
+                    btn.style.background = '#333';
+                    btn.style.color = '#fff';
+                    btn.style.borderColor = '#333';
+                    currentFilterCategory = btn.dataset.cat;
+                    renderPantryList();
+                });
+            });
+        }
     }
 
-    const response = await fetch(`${GEMINI_BASE_URL}/${GEMINI_MODEL}:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            contents: [{
-                parts: [
-                    { text: "Identify all food ingredients in this image and return a JSON object with key 'items' containing an array of string ingredient names." },
-                    { inline_data: { mime_type: "image/png", data: base64Image } }
-                ]
-            }],
-            generationConfig: {
-                responseMimeType: "application/json"
+    const filteredItems = currentFilterCategory === 'all' 
+        ? pantryItems 
+        : pantryItems.filter(item => (item.category || 'other') === currentFilterCategory);
+
+    if (pantryItems.length === 0) {
+        container.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #888; background: #fafafa; border-radius: 12px; border: 2px dashed #eee;">
+                <div style="font-size: 36px; margin-bottom: 8px;">🧺</div>
+                <div style="font-weight: 500; font-size: 15px;">食材库暂无内容</div>
+                <div style="font-size: 13px; color: #aaa; margin-top: 4px;">可通过上方输入框手动添加，或点击“智能识别”存入食材</div>
+            </div>`;
+        return;
+    }
+
+    if (filteredItems.length === 0) {
+        container.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 30px; color: #888; font-size: 14px;">
+                该分类下暂无食材
+            </div>`;
+        return;
+    }
+
+    container.style.cssText = `
+        display: grid; 
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
+        gap: 12px; 
+        width: 100%;
+    `;
+
+    container.innerHTML = filteredItems.map((item) => {
+        const realIdx = pantryItems.indexOf(item);
+        const catInfo = CATEGORY_MAP[item.category] || CATEGORY_MAP.other;
+        
+        let expiryHtml = '';
+        const expiryDate = item.expiry || getDefaultExpiryDate();
+        const today = new Date().toISOString().split('T')[0];
+        
+        if (expiryDate < today) {
+            expiryHtml = `<span style="font-size: 11px; color: #d93025; background: #fce8e6; padding: 2px 6px; border-radius: 4px; font-weight: 500;">⚠️ 已过保质期</span>`;
+        } else {
+            expiryHtml = `<span style="font-size: 11px; color: #5f6368;">保质期至: ${expiryDate}</span>`;
+        }
+
+        return `
+            <div class="pantry-card-item" data-index="${realIdx}" style="
+                background: #fff; 
+                border: 1px solid #eaeaea; 
+                border-radius: 10px; 
+                padding: 12px 14px; 
+                display: flex; 
+                flex-direction: column; 
+                justify-content: space-between; 
+                position: relative;
+                transition: all 0.2s ease;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            ">
+                <div>
+                    <!-- 顶部：食材名称与右侧编辑、删除按钮 -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                        <div style="font-weight: 600; font-size: 15px; color: #202124; word-break: break-all; padding-right: 4px;">${item.name}</div>
+                        <div style="display: flex; align-items: center; gap: 2px; flex-shrink: 0;">
+                            <button class="edit-ingredient-btn" data-index="${realIdx}" title="编辑食材" style="
+                                background: none; border: none; cursor: pointer; color: #666; font-size: 14px; padding: 2px 4px; border-radius: 4px;
+                            " onmouseover="this.style.color='#1967d2'" onmouseout="this.style.color='#666'">✏️</button>
+                            <button class="remove-tag-btn" data-index="${realIdx}" title="删除食材" style="
+                                background: none; border: none; cursor: pointer; color: #999; font-size: 16px; padding: 2px 4px; border-radius: 4px;
+                            " onmouseover="this.style.color='#d93025'" onmouseout="this.style.color='#999'">&times;</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 8px; border-top: 1px solid #f1f3f4; padding-top: 8px;">
+                    <span style="align-self: flex-start; font-size: 11px; background: ${catInfo.color}; color: ${catInfo.textCol}; padding: 2px 6px; border-radius: 4px; font-weight: 500;">
+                        ${catInfo.label}
+                    </span>
+                    ${expiryHtml}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // 绑定编辑图标按钮事件
+    container.querySelectorAll('.edit-ingredient-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const index = parseInt(btn.dataset.index, 10);
+            openEditModal(index);
+        });
+    });
+
+    // 绑定删除按钮事件
+    container.querySelectorAll('.remove-tag-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const index = parseInt(btn.dataset.index, 10);
+            pantryItems.splice(index, 1);
+            savePantry();
+        });
+    });
+}
+
+function openEditModal(index) {
+    const item = pantryItems[index];
+    if (!item) return;
+
+    const modal = document.getElementById('editIngredientModal');
+    const idInput = document.getElementById('editIngredientId');
+    const nameInput = document.getElementById('editIngredientName');
+    const categorySelect = document.getElementById('editIngredientCategory');
+    const expiryInput = document.getElementById('editIngredientExpiry');
+
+    if (modal && nameInput) {
+        idInput.value = index;
+        nameInput.value = item.name || '';
+        if (categorySelect) categorySelect.value = item.category || 'vegetable';
+        if (expiryInput) expiryInput.value = item.expiry || getDefaultExpiryDate();
+        modal.classList.add('active');
+    }
+}
+
+function setupPantryEvents() {
+    const addBtn = document.getElementById('btnAddIngredient') || document.getElementById('add-ingredient-btn');
+    const input = document.getElementById('manualIngredientInput') || document.getElementById('new-ingredient-input');
+    const scanBtn = document.getElementById('btnScanImage') || document.getElementById('scan-receipt-btn');
+    const fileInput = document.getElementById('imageFileInput') || document.getElementById('receipt-file-input');
+
+    const editModal = document.getElementById('editIngredientModal');
+    const closeEditBtn = document.getElementById('btnCloseEditIngredient');
+    const saveEditBtn = document.getElementById('btnSaveIngredient');
+    const deleteEditBtn = document.getElementById('btnDeleteIngredient');
+    const idInput = document.getElementById('editIngredientId');
+    const nameInput = document.getElementById('editIngredientName');
+    const categorySelect = document.getElementById('editIngredientCategory');
+    const expiryInput = document.getElementById('editIngredientExpiry');
+
+    if (closeEditBtn && editModal) {
+        closeEditBtn.addEventListener('click', () => editModal.classList.remove('active'));
+    }
+
+    if (saveEditBtn && editModal) {
+        saveEditBtn.addEventListener('click', () => {
+            const index = parseInt(idInput.value, 10);
+            const newName = nameInput.value.trim();
+            if (!isNaN(index) && pantryItems[index] && newName) {
+                pantryItems[index].name = newName;
+                if (categorySelect) pantryItems[index].category = categorySelect.value;
+                if (expiryInput) pantryItems[index].expiry = expiryInput.value;
+                savePantry();
+                editModal.classList.remove('active');
             }
-        })
-    });
-
-    if (!response.ok) {
-        throw new Error(`Gemini API Error: ${response.statusText}`);
+        });
     }
 
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-    return JSON.parse(text);
-}
-
-export async function refineSingleDish(dishName, modificationInstruction, apiKey) {
-    if (!apiKey) {
-        throw new Error('API Key is required');
-    }
-
-    const response = await fetch(`${GEMINI_BASE_URL}/${GEMINI_MODEL}:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            contents: [{
-                parts: [{ text: `Modify recipe for ${dishName}: ${modificationInstruction}` }]
-            }],
-            generationConfig: {
-                responseMimeType: "application/json"
+    if (deleteEditBtn && editModal) {
+        deleteEditBtn.addEventListener('click', () => {
+            const index = parseInt(idInput.value, 10);
+            if (!isNaN(index) && pantryItems[index]) {
+                pantryItems.splice(index, 1);
+                savePantry();
+                editModal.classList.remove('active');
             }
-        })
-    });
-
-    if (!response.ok) {
-        throw new Error(`Gemini API Error: ${response.statusText}`);
+        });
     }
 
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-    return JSON.parse(text);
-}
-
-async function fetchPlanFromGemini(pantryList, mode = 'weekly') {
-    const config = getAppConfig();
-    if (!config.geminiApiKey) {
-        throw new Error('请先设置 Gemini API Key！');
+    if (addBtn && input) {
+        const addItem = () => {
+            const val = input.value.trim();
+            if (val) {
+                pantryItems.push({ 
+                    name: val, 
+                    category: 'vegetable', 
+                    expiry: getDefaultExpiryDate(), // 默认一周后过期
+                    addedAt: new Date().toISOString() 
+                });
+                input.value = '';
+                savePantry();
+            }
+        };
+        addBtn.addEventListener('click', addItem);
+        input.addEventListener('keypress', (e) => { if (e.key === 'Enter') addItem(); });
     }
 
-    const prefs = getUserPreferences() || {};
-    const favorites = getFavoritesList(); // 获取必吃金榜
+    if (scanBtn && fileInput) {
+        scanBtn.addEventListener('click', () => fileInput.click());
 
-    const pantryNames = pantryList.map(item => item.name).join(', ') || '常用家庭食材';
-    const favoriteNames = favorites.map(item => item.dish_name).join(', ') || '暂无';
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
 
-    const durationText = mode === 'daily' ? '单日（包含 早餐、午餐、晚餐）' : '一周（周一至周日）';
+            scanBtn.disabled = true;
+            scanBtn.innerText = '识别中...';
 
-    const prompt = `
-你是一位顶级星级大厨和家庭营养师。请为用户生成 ${durationText} 的精美菜单。
+            try {
+                const base64 = await fileToBase64(file);
+                const result = await scanImageForIngredients(base64);
 
-【当前已有食材】：${pantryNames}
-【⭐ 必吃金榜（非常重要的偏好菜品，请尽量从中选择或参考其风格）】：${favoriteNames}
-【忌口/偏好限制】：${prefs.dietaryRestrictions || '无'}
-【餐食习惯】：早餐 ${prefs.bfCuisine || '快手'} (${prefs.bfCount || 1}道)，午餐 ${prefs.lunchCuisine || '家常'} (${prefs.lunchCount || 2}道)，晚餐 ${prefs.dinnerCuisine || '丰富'} (${prefs.dinnerCount || 2}道)。
-
-【严格要求】：
-1. 生成菜谱时，**优先并倾向于从【必吃金榜】中挑选合适菜品**融入菜单。
-2. 返回格式必须为严格合法的 JSON，不要添加任何 Markdown 或额外文本。
-
-JSON 格式规范：
-{
-  "weeklyPlan": [
-    {
-      "day": "${mode === 'daily' ? '今日三餐' : '周一'}",
-      "breakfast": [
-        { "dish_name": "菜名", "ingredients": ["食材1", "食材2"], "steps": "制作步骤", "image_search_kw": "英文图片关键词" }
-      ],
-      "lunch": [ ... ],
-      "dinner": [ ... ]
-    }
-  ]
-}
-`;
-
-    const response = await fetch(`${GEMINI_BASE_URL}/${GEMINI_MODEL}:generateContent?key=${config.geminiApiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-    });
-
-    const data = await response.json();
-    if (data.error) throw new Error(`[Gemini API Error]: ${data.error.message}`);
-    
-    const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!candidateText) throw new Error('Gemini 未返回有效内容');
-
-    return cleanAndParseJSON(candidateText);
-}
-
-export async function scanImageForRecipe(base64Image) {
-    const apiKey = localStorage.getItem('soussnap_gemini_key');
-    if (!apiKey) throw new Error("未找到 API Key");
-
-    const prompt = `请识别这张图片中的食材或小票，并以合法的 JSON 数组格式返回识别到的食材列表（不要包含任何 markdown 代码块标记，如 \`\`\`json）：
-    [
-      { "name": "食材名称1", "category": "vegetable", "expiry": "2026-12-31" }
-    ]`;
-
-    // 示例请求（可根据你项目里现有的其他 API 写法调整）
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            contents: [{
-                parts: [
-                    { text: prompt },
-                    {
-                        inline_data: {
-                            mime_type: "image/jpeg",
-                            data: base64Image
+                if (result && Array.isArray(result.items)) {
+                    result.items.forEach(item => {
+                        const itemName = typeof item === 'string' ? item : item.name;
+                        const itemCat = typeof item === 'object' && item.category ? item.category : 'vegetable';
+                        
+                        if (itemName && !pantryItems.some(p => p.name === itemName)) {
+                            pantryItems.push({ 
+                                name: itemName, 
+                                category: itemCat, 
+                                expiry: getDefaultExpiryDate(), // 默认一周后过期
+                                addedAt: new Date().toISOString() 
+                            });
                         }
-                    }
-                ]
-            }]
-        })
-    });
-
-    const data = await response.json();
-    const text = data.candidates[0].content.parts[0].text;
-    const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    return JSON.parse(cleanText);
+                    });
+                    savePantry();
+                    alert(`成功识别出 ${result.items.length} 种食材并加入食材库！`);
+                }
+            } catch (err) {
+                alert(`识别失败: ${err.message}`);
+            } finally {
+                scanBtn.disabled = false;
+                scanBtn.innerText = '🔍 识别并存入食材库';
+                fileInput.value = '';
+            }
+        });
+    }
 }
 
-// 3. 换单道菜
-export async function generateSingleReplacementDish(mealType, excludeName) {
-    const config = getAppConfig();
-    if (!config.geminiApiKey) {
-        throw new Error('请先设置 Gemini API Key！');
-    }
-
-    const mealLabel = mealType === 'breakfast' ? '早餐' : mealType === 'lunch' ? '午餐' : '晚餐';
-    const prompt = `请推荐一道适合${mealLabel}的美味菜品，菜名绝对不能是 "${excludeName}"。
-请严格返回合法的 JSON 格式（不要包含任何 markdown 代码块标记）：
-{
-  "dish_name": "新菜名",
-  "mealType": "${mealType}",
-  "ingredients": ["主料1", "主料2"],
-  "steps": "详细的烹饪步骤说明..."
-}`;
-
-    const response = await fetch(`${GEMINI_BASE_URL}/${GEMINI_MODEL}:generateContent?key=${config.geminiApiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-                responseMimeType: "application/json"
-            }
-        })
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = error => reject(error);
     });
-
-    const data = await response.json();
-    if (data.error) throw new Error(`[Gemini API Error]: ${data.error.message}`);
-    
-    const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!candidateText) throw new Error('Gemini 未返回有效内容');
-
-    return cleanAndParseJSON(candidateText);
 }
