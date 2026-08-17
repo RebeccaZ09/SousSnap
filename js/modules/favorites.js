@@ -1,6 +1,6 @@
 // js/modules/favorites.js
 import { openRecipeDrawer } from './recipeDrawer.js';
-import { scanImageForRecipe } from '../api/gemini.js'; // 假设你的 API 里有这个方法，或者用来解析菜谱
+import { scanImageForRecipe } from '../api/gemini.js';
 
 const FAVORITES_KEY = 'soussnap_favorites';
 
@@ -34,12 +34,12 @@ export function toggleFavorite(dish) {
 }
 
 export function renderFavoritesUI() {
-    const container = document.getElementById('favoriteList'); // 对应你 index.html 中的 ID
+    const container = document.getElementById('favoriteList');
     if (!container) return;
 
     const list = getFavoritesList();
     
-    // 我们在渲染列表的最上方注入一个“添加菜品”的操作栏
+    // 顶部操作栏
     let topActionHtml = `
         <div style="margin-bottom: 16px; display: flex; gap: 8px;">
             <button id="btnAddFavorite" class="btn-primary" style="flex: 1; font-size: 13px; padding: 10px; border-radius: var(--radius-md, 12px); background: var(--primary-color, #7D8F74); color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
@@ -55,11 +55,11 @@ export function renderFavoritesUI() {
                 🌱 暂无收藏的菜品，快去添加第一道拿手菜吧！
             </div>
         `;
-        setupFavoritesEvents(); // 重新绑定事件
+        setupFavoritesEvents();
         return;
     }
 
-    // 自动按早、午、晚餐分类聚合
+    // 按早、午、晚餐分类聚合
     const categorized = {
         '🍳 早餐': [],
         '🍱 午餐': [],
@@ -91,10 +91,26 @@ export function renderFavoritesUI() {
         `;
 
         dishes.forEach(dish => {
+            // 餐次标签标准化映射
+            let label = '其他';
+            let emoji = '🍽️';
+            const rawMeal = dish.mealType || '';
+            
+            if (rawMeal.includes('早') || rawMeal === 'breakfast') {
+                label = '早餐'; emoji = '🍳';
+            } else if (rawMeal.includes('午') || rawMeal === 'lunch') {
+                label = '午餐'; emoji = '🍱';
+            } else if (rawMeal.includes('晚') || rawMeal === 'dinner') {
+                label = '晚餐'; emoji = '🍲';
+            }
+
             html += `
                 <div class="favorite-item-row" data-name="${dish.dish_name}" style="display: flex; justify-content: space-between; align-items: center; background: #FFFFFF; padding: 12px 16px; border-radius: var(--radius-md, 12px); cursor: pointer; border: 1px solid var(--border-color, #E8E4DD); box-shadow: 0 2px 8px rgba(125, 115, 105, 0.03); transition: all 0.2s;">
-                    <span style="font-size: 14px; font-weight: 500; color: var(--text-main, #4A4543);">${dish.dish_name}</span>
-                    <button class="remove-fav-inline" data-name="${dish.dish_name}" style="background: none; border: none; cursor: pointer; font-size: 16px; padding: 4px;" title="移出最爱">❤️</button>
+                    <div style="display: flex; align-items: center; gap: 8px; flex: 1; padding-right: 8px;">
+                        <span style="font-size: 11px; background: #F5F3F0; padding: 2px 6px; border-radius: 6px; color: var(--text-secondary, #8C857E); white-space: nowrap;">${emoji} ${label}</span>
+                        <span style="font-size: 14px; font-weight: 500; color: var(--text-main, #4A4543);">${dish.dish_name}</span>
+                    </div>
+                    <button class="remove-fav-inline" data-name="${dish.dish_name}" style="background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px;" title="移出最爱">🗑️</button>
                 </div>
             `;
         });
@@ -103,7 +119,7 @@ export function renderFavoritesUI() {
     }
 
     container.innerHTML = html;
-    setupFavoritesEvents(); // 重新绑定所有交互事件
+    setupFavoritesEvents();
 }
 
 function setupFavoritesEvents() {
@@ -115,7 +131,7 @@ function setupFavoritesEvents() {
 
     // 1. 绑定添加按钮点击事件
     if (addBtn && fileInput && !addBtn.dataset.bound) {
-        addBtn.dataset.bound = "true"; // 防止重复绑定
+        addBtn.dataset.bound = "true";
         addBtn.addEventListener('click', () => {
             const choice = prompt("请选择添加方式：\n1. 输入“1”：手动输入菜名\n2. 输入“2”：拍照或上传菜谱图片识别");
             
@@ -139,7 +155,7 @@ function setupFavoritesEvents() {
                     }
                 }
             } else if (choice === '2') {
-                fileInput.click(); // 唤起手机拍照或相册
+                fileInput.click();
             }
         });
 
@@ -153,7 +169,6 @@ function setupFavoritesEvents() {
 
             try {
                 const base64 = await fileToBase64(file);
-                // 调用 Gemini 识别菜谱（返回包含菜名、食材、步骤的对象）
                 const result = await scanImageForRecipe(base64); 
 
                 if (result && (result.dish_name || result.name)) {
@@ -188,7 +203,6 @@ function setupFavoritesEvents() {
 
     // 3. 绑定点击整行打开抽屉事件
     container.querySelectorAll('.favorite-item-row').forEach(row => {
-        // 避免重复绑定
         if (row.dataset.bound) return;
         row.dataset.bound = "true";
 
@@ -201,7 +215,7 @@ function setupFavoritesEvents() {
         });
     });
 
-    // 4. 绑定点击红心取消收藏事件
+    // 4. 绑定点击垃圾桶删除收藏事件
     container.querySelectorAll('.remove-fav-inline').forEach(btn => {
         if (btn.dataset.bound) return;
         btn.dataset.bound = "true";
