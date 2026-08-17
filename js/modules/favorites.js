@@ -68,7 +68,7 @@ export function renderFavoritesUI() {
     };
 
     list.forEach(dish => {
-        const meal = dish.mealType || '其他';
+        const meal = dish.mealType || '';
         if (meal.includes('早') || meal === 'breakfast') {
             categorized['🍳 早餐'].push(dish);
         } else if (meal.includes('午') || meal === 'lunch') {
@@ -91,7 +91,6 @@ export function renderFavoritesUI() {
         `;
 
         dishes.forEach(dish => {
-            // 餐次标签标准化映射
             let label = '其他';
             let emoji = '🍽️';
             const rawMeal = dish.mealType || '';
@@ -138,9 +137,16 @@ function setupFavoritesEvents() {
             if (choice === '1') {
                 const dishName = prompt("请输入你想加入最爱的菜名：");
                 if (dishName && dishName.trim()) {
+                    // 让用户选择餐次
+                    const mealChoice = prompt("请选择这道菜属于哪一餐：\n1. 早餐\n2. 午餐\n3. 晚餐\n(直接输入数字或名称，默认晚餐)");
+                    let mealType = '晚餐';
+                    if (mealChoice === '1' || mealChoice?.includes('早')) mealType = '早餐';
+                    else if (mealChoice === '2' || mealChoice?.includes('午')) mealType = '午餐';
+                    else if (mealChoice === '3' || mealChoice?.includes('晚')) mealType = '晚餐';
+
                     const newDish = {
                         dish_name: dishName.trim(),
-                        mealType: '其他',
+                        mealType: mealType,
                         ingredients: [],
                         steps: '手动添加的菜品，暂无详细步骤。',
                         addedAt: new Date().toISOString()
@@ -173,9 +179,17 @@ function setupFavoritesEvents() {
 
                 if (result && (result.dish_name || result.name)) {
                     const dishName = result.dish_name || result.name;
+                    
+                    // 允许用户在识别后调整餐次
+                    const mealChoice = prompt(`识别成功："${dishName}"\n请选择这道菜属于哪一餐：\n1. 早餐\n2. 午餐\n3. 晚餐`, "3");
+                    let mealType = result.mealType || '晚餐';
+                    if (mealChoice === '1' || mealChoice?.includes('早')) mealType = '早餐';
+                    else if (mealChoice === '2' || mealChoice?.includes('午')) mealType = '午餐';
+                    else if (mealChoice === '3' || mealChoice?.includes('晚')) mealType = '晚餐';
+
                     const newDish = {
                         dish_name: dishName,
-                        mealType: result.mealType || '其他',
+                        mealType: mealType,
                         ingredients: result.ingredients || [],
                         steps: result.steps || '通过图片识别添加。',
                         addedAt: new Date().toISOString()
