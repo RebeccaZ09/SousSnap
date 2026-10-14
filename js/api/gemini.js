@@ -89,8 +89,8 @@ async function fetchPlanFromGemini(pantryList, mode = 'weekly') {
     const pantryNames = pantryList.map(item => item.name).join(', ') || '常用家庭食材';
     const favoriteNames = favorites.map(item => item.dish_name).join(', ') || '暂无';
 
-    const durationText = mode === 'daily' ? '单日（包含 早餐、午餐、晚餐）' : '一周（周一至周日）';
-
+    const durationText = mode === 'daily' ? '单日（包含 早餐、午餐、晚餐）' : '五天（周一至周五）';
+    
     const prompt = `
 你是一位顶级星级大厨和家庭营养师。请为用户生成 ${durationText} 的精美菜单。
 
