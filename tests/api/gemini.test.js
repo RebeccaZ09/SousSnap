@@ -28,12 +28,12 @@ describe('Gemini API Module', () => {
             json: async () => ({
                 candidates: [{
                     content: {
-                        parts: [{ 
+                        parts: [{
                             text: JSON.stringify({
                                 dish_name: '微辣宫保鸡丁',
                                 ingredients: ['鸡胸肉', '花生', '黄瓜'],
                                 steps: ['切块', '炒制']
-                            }) 
+                            })
                         }]
                     }
                 }]
