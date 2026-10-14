@@ -99,9 +99,10 @@ async function fetchPlanFromGemini(pantryList, mode = 'weekly') {
 【忌口/偏好限制】：${prefs.dietaryRestrictions || '无'}
 【餐食习惯】：早餐 ${prefs.bfCuisine || '快手'} (${prefs.bfCount || 1}道)，午餐 ${prefs.lunchCuisine || '家常'} (${prefs.lunchCount || 2}道)，晚餐 ${prefs.dinnerCuisine || '丰富'} (${prefs.dinnerCount || 2}道)。
 
-【严格要求】：
-1. 生成菜谱时，**优先并倾向于从【必吃金榜】中挑选合适菜品**融入菜单。
-2. 返回格式必须为严格合法的 JSON，不要添加任何 Markdown 或额外文本。
+【严格要求（非常关键）】：
+1. **早餐要求**：早餐必须【100% 只从【⭐ 必吃金榜】】中挑选合适菜品！如果金榜中没有明确适合早餐的菜，也必须从中挑选一道相对快手合适的菜品。
+2. **午餐与晚餐**：优先参考【⭐ 必吃金榜】并结合【当前已有食材】进行搭配。
+3. **输出格式**：返回格式必须为严格合法的 JSON，不要添加任何 Markdown 或额外文本。
 
 JSON 格式规范：
 {
@@ -118,21 +119,59 @@ JSON 格式规范：
 }
 `;
 
-    const response = await fetch(`${GEMINI_BASE_URL}/${GEMINI_MODEL}:generateContent?key=${config.geminiApiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-    });
+    try {
+        const response = await fetch(`${GEMINI_BASE_URL}/${GEMINI_MODEL}:generateContent?key=${config.geminiApiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json"
+                }
+            })
+        });
 
-    const data = await response.json();
-    if (data.error) throw new Error(`[Gemini API Error]: ${data.error.message}`);
-    
-    const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!candidateText) throw new Error('Gemini 未返回有效内容');
+        const data = await response.json();
+        if (data.error) throw new Error(data.error.message);
+        
+        const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!candidateText) throw new Error('Gemini 未返回有效内容');
 
-    return cleanAndParseJSON(candidateText);
+        return cleanAndParseJSON(candidateText);
+    } catch (err) {
+        console.warn("Gemini API 高负载或网络异常，启用本地金榜/食材库降级兜底方案:", err.message);
+
+        // 🌟 降级逻辑：按模式构建保底数据，优先采用 Favorites 里的菜品
+        const days = mode === 'daily' ? ['今日三餐'] : ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+        
+        const getRandomFavOrFallback = (defaultDishName) => {
+            if (favorites && favorites.length > 0) {
+                const randomFav = favorites[Math.floor(Math.random() * favorites.length)];
+                return {
+                    dish_name: randomFav.dish_name,
+                    ingredients: randomFav.ingredients && randomFav.ingredients.length > 0 ? randomFav.ingredients : ["精选食材"],
+                    steps: randomFav.steps || "按个人喜好烹饪即可。",
+                    image_search_kw: "chinese food"
+                };
+            }
+            return {
+                dish_name: defaultDishName,
+                ingredients: pantryList.length > 0 ? pantryList.slice(0, 3).map(p => p.name) : ["常用食材"],
+                steps: "1. 准备食材；2. 热锅下油快速翻炒；3. 调味出锅。",
+                image_search_kw: "home cooked food"
+            };
+        };
+
+        const fallbackWeeklyPlan = days.map(dayName => ({
+            day: dayName,
+            breakfast: [getRandomFavOrFallback("营养燕麦粥")],
+            lunch: [getRandomFavOrFallback("家常炒时蔬"), getRandomFavOrFallback("番茄炒鸡蛋")],
+            dinner: [getRandomFavOrFallback("香煎鸡胸肉"), getRandomFavOrFallback("清炒小白菜")]
+        }));
+
+        return { weeklyPlan: fallbackWeeklyPlan };
+    }
 }
-
 // 3. 换单道菜（加入“我的最爱”金榜降级兜底逻辑）
 export async function generateSingleReplacementDish(mealType, excludeName) {
     const config = getAppConfig();
