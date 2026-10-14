@@ -15,7 +15,7 @@ export async function generateDailyPlanner(pantryList = []) {
     return fetchPlanFromGemini(pantryList, 'daily');
 }
 
-// 2. 生成一周三餐
+// 2. 生成五天三餐（周一至周五）
 export async function generateWeeklyPlanner(pantryList = []) {
     return fetchPlanFromGemini(pantryList, 'weekly');
 }
@@ -60,7 +60,7 @@ export async function refineSingleDish(dishName, modificationInstruction, apiKey
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             contents: [{
-                parts: [{ text: `Modify recipe for ${dishName}: ${modificationInstruction}` }]
+                parts: [{ text: `Modify recipe for ${dishName}:${modificationInstruction}` }]
             }],
             generationConfig: {
                 responseMimeType: "application/json"
@@ -95,15 +95,15 @@ async function fetchPlanFromGemini(pantryList, mode = 'weekly') {
 你是一位顶级星级大厨和家庭营养师。请为用户生成 ${durationText} 的精美菜单。
 
 【当前已有食材】：${pantryNames}
-【⭐ 必吃金榜（非常重要的偏好菜品，请尽量从中选择或参考其风格）】：${favoriteNames}
+【⭐ 必吃金榜（非常重要的偏好菜品）】：${favoriteNames}
 【忌口/偏好限制】：${prefs.dietaryRestrictions || '无'}
-【餐食习惯】：早餐 ${prefs.bfCuisine || '快手'} (${prefs.bfCount || 1}道)，午餐 ${prefs.lunchCuisine || '家常'} (${prefs.lunchCount || 2}道)，晚餐 ${prefs.dinnerCuisine || '丰富'} (${prefs.dinnerCount || 2}道)。
+【餐食习惯规范（必须严格遵守）】：
+1. **早餐**：必须【100% 只从【⭐ 必吃金榜】中挑选】适合早餐的菜品。
+2. **午餐**：4岁小朋友带去学校的便当/零食组合。要求：免加热、健康便携，每份包含2~3种轻食食材（例如：奶酪棒、新鲜蓝莓/草莓、小饼干、坚果或小面包等组合）。
+3. **晚餐**：${prefs.dinnerCuisine \vert{}\vert{} '丰富'} (${prefs.dinnerCount || 2}道家常菜，优先结合【当前已有食材】)。
 
-【严格要求（非常关键）】：
-1. **早餐要求**：早餐必须【100% 只从【⭐ 必吃金榜】分类为早餐的菜品】中挑选合适菜品！如果金榜中没有明确适合早餐的菜，也必须从中挑选一道相对快手合适的菜品。
-2. **午餐与晚餐**：优先参考【⭐ 必吃金榜】并结合【当前已有食材】进行搭配。
-3. **输出格式**：返回格式必须为严格合法的 JSON，不要添加任何 Markdown 或额外文本。
-4. **午餐要求**：必须是适合4岁小朋友带去学校的便当零食组合，包含2~3种简单、健康、免加热的食物（例如：奶酪棒、小番茄、蓝莓、饼干等）。
+【严格输出要求】：
+返回格式必须为严格合法的 JSON，不要添加任何 Markdown 或额外文本。
 
 JSON 格式规范：
 {
@@ -111,10 +111,14 @@ JSON 格式规范：
     {
       "day": "${mode === 'daily' ? '今日三餐' : '周一'}",
       "breakfast": [
-        { "dish_name": "菜名", "ingredients": ["食材1", "食材2"], "steps": "制作步骤", "image_search_kw": "英文图片关键词" }
+        { "dish_name": "菜名", "ingredients": ["食材1"], "steps": "制作步骤", "image_search_kw": "breakfast" }
       ],
-      "lunch": [ ... ],
-      "dinner": [ ... ]
+      "lunch": [
+        { "dish_name": "幼儿便当点心组合", "ingredients": ["奶酪棒", "蓝莓", "小饼干"], "steps": "直接清洗并装入便当盒即可。", "image_search_kw": "kids snack bento" }
+      ],
+      "dinner": [
+        { "dish_name": "菜名", "ingredients": ["食材1", "食材2"], "steps": "制作步骤", "image_search_kw": "dinner" }
+      ]
     }
   ]
 }
@@ -140,54 +144,82 @@ JSON 格式规范：
 
         return cleanAndParseJSON(candidateText);
     } catch (err) {
-        console.warn("Gemini API 高负载或网络异常，启用本地金榜/食材库降级兜底方案:", err.message);
+        console.warn("Gemini API 高负载或网络异常，启用本地金榜/幼儿便当降级兜底方案:", err.message);
 
-        // 🌟 降级逻辑：按模式构建保底数据，优先采用 Favorites 里的菜品
-        const days = mode === 'daily' ? ['今日三餐'] : ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+        // 🌟 降级逻辑：固定为 5 天（周一至周五）
+        const days = mode === 'daily' ? ['今日三餐'] : ['周一', '周二', '周三', '周四', '周五'];
         
-        const getRandomFavOrFallback = (defaultDishName) => {
+        // 早餐：只从最爱中挑选
+        const getFavoriteBreakfast = () => {
             if (favorites && favorites.length > 0) {
                 const randomFav = favorites[Math.floor(Math.random() * favorites.length)];
                 return {
                     dish_name: randomFav.dish_name,
                     ingredients: randomFav.ingredients && randomFav.ingredients.length > 0 ? randomFav.ingredients : ["精选食材"],
                     steps: randomFav.steps || "按个人喜好烹饪即可。",
+                    image_search_kw: "breakfast food"
+                };
+            }
+            return {
+                dish_name: "金榜快手早餐",
+                ingredients: ["请先去“我的最爱”添加早餐菜品"],
+                steps: "在我的最爱中添加菜品后，早餐将优先从此展示。",
+                image_search_kw: "simple breakfast"
+            };
+        };
+
+        // 午餐：4岁小朋友带去学校的便当零食组合（2-3种食材）
+        const kidsLunchPool = [
+            { dish_name: "水果奶酪便当", ingredients: ["奶酪棒", "草莓", "小馒头"], steps: "将水果洗净，连同奶酪棒和小馒头一起放入便当盒。", image_search_kw: "kids bento box" },
+            { dish_name: "健康轻食点心盒", ingredients: ["奶酪块", "小番茄", "全麦饼干"], steps: "直接洗净装盒携带。", image_search_kw: "toddler snack" },
+            { dish_name: "果香点心组合", ingredients: ["独立包装纯牛奶", "香蕉段", "动物饼干"], steps: "香蕉切段装入便当盒。", image_search_kw: "kids snack" }
+        ];
+
+        // 晚餐：家常菜
+        const getDinnerFallback = () => {
+            if (favorites && favorites.length > 0 && Math.random() > 0.5) {
+                const randomFav = favorites[Math.floor(Math.random() * favorites.length)];
+                return {
+                    dish_name: randomFav.dish_name,
+                    ingredients: randomFav.ingredients || ["精选食材"],
+                    steps: randomFav.steps || "按常规步骤烹饪。",
                     image_search_kw: "chinese food"
                 };
             }
             return {
-                dish_name: defaultDishName,
-                ingredients: pantryList.length > 0 ? pantryList.slice(0, 3).map(p => p.name) : ["常用食材"],
-                steps: "1. 准备食材；2. 热锅下油快速翻炒；3. 调味出锅。",
+                dish_name: "家常快手小炒",
+                ingredients: pantryList.length > 0 ? pantryList.slice(0, 3).map(p => p.name) : ["鸡蛋", "西红柿"],
+                steps: "1. 准备好食材；2. 热锅下油翻炒调味即可。",
                 image_search_kw: "home cooked food"
             };
         };
 
         const fallbackWeeklyPlan = days.map(dayName => ({
             day: dayName,
-            breakfast: [getRandomFavOrFallback("营养燕麦粥")],
-            lunch: [getRandomFavOrFallback("家常炒时蔬"), getRandomFavOrFallback("番茄炒鸡蛋")],
-            dinner: [getRandomFavOrFallback("香煎鸡胸肉"), getRandomFavOrFallback("清炒小白菜")]
+            breakfast: [getFavoriteBreakfast()],
+            lunch: [kidsLunchPool[Math.floor(Math.random() * kidsLunchPool.length)]],
+            dinner: [getDinnerFallback(), getDinnerFallback()]
         }));
 
         return { weeklyPlan: fallbackWeeklyPlan };
     }
 }
-// 3. 换单道菜（加入“我的最爱”金榜降级兜底逻辑）
+
+// 3. 换单道菜
 export async function generateSingleReplacementDish(mealType, excludeName) {
     const config = getAppConfig();
     if (!config.geminiApiKey) {
         throw new Error('请先设置 Gemini API Key！');
     }
 
-    const mealLabel = mealType === 'breakfast' ? '早餐' : mealType === 'lunch' ? '午餐' : '晚餐';
+    const mealLabel = mealType === 'breakfast' ? '早餐' : mealType === 'lunch' ? '午餐（4岁小朋友学校便当/零食，2-3种免加热食材）' : '晚餐';
     const prompt = `请推荐一道适合${mealLabel}的美味菜品，菜名绝对不能是 "${excludeName}"。
 请严格返回合法的 JSON 格式（不要包含任何 markdown 代码块标记）：
 {
   "dish_name": "新菜名",
   "mealType": "${mealType}",
   "ingredients": ["主料1", "主料2"],
-  "steps": "详细的烹饪步骤说明..."
+  "steps": "详细的烹饪/准备步骤说明..."
 }`;
 
     try {
@@ -203,7 +235,6 @@ export async function generateSingleReplacementDish(mealType, excludeName) {
         });
 
         const data = await response.json();
-        // 如果遇到高负载错误或其他 API 报错，主动捕获进入 catch 降级
         if (data.error) {
             throw new Error(data.error.message);
         }
@@ -213,15 +244,20 @@ export async function generateSingleReplacementDish(mealType, excludeName) {
 
         return cleanAndParseJSON(candidateText);
     } catch (err) {
-        console.warn("AI 换菜遇到高负载或网络错误，启用“我的最爱”金榜兜底:", err.message);
+        console.warn("AI 换菜遇到高负载，启用兜底:", err.message);
         
-        // 从“我的最爱”中寻找候选
-        const favorites = getFavoritesList();
-        // 过滤掉当前已经在这道菜名字相同的，或者尽量挑不一样的
-        const availableFavs = favorites.filter(fav => fav.dish_name !== excludeName);
+        if (mealType === 'lunch') {
+            return {
+                dish_name: "趣味水果便当",
+                mealType: "lunch",
+                ingredients: ["奶酪片", "蓝莓", "小饼干"],
+                steps: "装入便当盒，方便小朋友课间食用。"
+            };
+        }
 
+        const favorites = getFavoritesList();
+        const availableFavs = favorites.filter(fav => fav.dish_name !== excludeName);
         if (availableFavs.length > 0) {
-            // 随机挑选一个最爱
             const randomFav = availableFavs[Math.floor(Math.random() * availableFavs.length)];
             return {
                 dish_name: randomFav.dish_name,
@@ -231,12 +267,11 @@ export async function generateSingleReplacementDish(mealType, excludeName) {
             };
         }
 
-        // 如果连最爱列表也是空的，返回默认保底菜品
         return {
             dish_name: "葱花炒鸡蛋",
             mealType: mealType,
             ingredients: ["鸡蛋", "葱花", "食用油", "盐"],
-            steps: "1. 鸡蛋打散加入少许盐和葱花；2. 热锅下油，倒入蛋液快速翻炒凝固即可出锅。"
+            steps: "1. 鸡蛋打散；2. 热锅下油翻炒出锅。"
         };
     }
 }
