@@ -142,7 +142,7 @@ JSON 格式规范：
         console.warn("Gemini API 高负载或网络异常，启用本地金榜/食材库降级兜底方案:", err.message);
 
         // 🌟 降级逻辑：按模式构建保底数据，优先采用 Favorites 里的菜品
-        const days = mode === 'daily' ? ['今日三餐'] : ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+        const days = mode === 'daily' ? ['今日三餐'] : ['周一', '周二', '周三', '周四', '周五'];
         
         const getRandomFavOrFallback = (defaultDishName) => {
             if (favorites && favorites.length > 0) {
