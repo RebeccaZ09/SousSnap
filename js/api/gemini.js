@@ -84,7 +84,7 @@ const prompt = `
 【⭐ 必吃金榜（非常重要的偏好菜品）】：${favoriteNames}
 【忌口/偏好限制】：${prefs.dietaryRestrictions || '无'}
 【餐食习惯】：
-- 早餐：${prefs.bfCuisine || '快手'} (${prefs.bfCount || 1}道)，必须【100% 只从【⭐ 必吃金榜】】中挑选！
+- 早餐：${prefs.bfCuisine || '快手'} (${prefs.bfCount || 1}道)，必须【100% 只从【⭐ 必吃金榜】分类为早餐的食材中】中挑选！
 - 午餐：4岁小朋友带去学校的便当/零食（如奶酪棒、新鲜水果、小点心等，每份包含2种或3种轻便、免加热的健康食材/小零食）。
 - 晚餐：${prefs.dinnerCuisine || '丰富'} (${prefs.dinnerCount || 2}道)。
 
